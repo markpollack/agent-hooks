@@ -94,6 +94,13 @@ agent-hooks-spring (Spring AI adapter)
 - YAML/properties configuration (programmatic only)
 - Hook persistence or replay
 
+## Core API Summary
+
+- 8 source files in `agent-hooks-core`: AgentHookEvent, HookDecision (sealed), ToolCallRecord, HookContext, HookInput (sealed), AgentHook, AgentHookProvider, AgentHookRegistry
+- Registry dispatch: priority ordering → Block short-circuits → Modify chains → exception = Proceed
+- Default priority: 100. Tool pattern via regex. Retry only for AFTER_TOOL_CALL.
+- 22 tests passing
+
 ## Session Behavior
 
 Follow ROADMAP steps. Write tests before implementation. Create learnings after each step.
