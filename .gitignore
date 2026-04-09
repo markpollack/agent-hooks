@@ -36,3 +36,7 @@ build/
 
 ### Logs ###
 *.log
+
+### Agent / internal ###
+CLAUDE.md
+plans/
