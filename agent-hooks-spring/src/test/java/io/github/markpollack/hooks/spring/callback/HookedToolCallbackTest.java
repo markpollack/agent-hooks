@@ -5,8 +5,8 @@ import java.time.Duration;
 import io.github.markpollack.hooks.decision.HookContext;
 import io.github.markpollack.hooks.decision.HookDecision;
 import io.github.markpollack.hooks.decision.ToolCallRecord;
-import io.github.markpollack.hooks.event.AgentHookEvent;
-import io.github.markpollack.hooks.event.HookInput;
+import io.github.markpollack.hooks.event.AfterToolCall;
+import io.github.markpollack.hooks.event.BeforeToolCall;
 import io.github.markpollack.hooks.registry.AgentHookRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,7 +63,7 @@ class HookedToolCallbackTest {
 
 	@Test
 	void blockShouldReturnReasonAndNeverCallDelegate() {
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, input -> HookDecision.block("over budget"));
+		registry.on(BeforeToolCall.class, event -> HookDecision.block("over budget"));
 
 		String result = hooked.call("{}", null);
 
@@ -73,8 +73,8 @@ class HookedToolCallbackTest {
 
 	@Test
 	void modifyShouldPassModifiedInputToDelegate() {
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL,
-				input -> HookDecision.modify("{\"cuisine\":\"Spanish\"}"));
+		registry.on(BeforeToolCall.class,
+				event -> HookDecision.modify("{\"cuisine\":\"Spanish\"}"));
 		when(delegate.call(eq("{\"cuisine\":\"Spanish\"}"), any())).thenReturn("found 5 restaurants");
 
 		String result = hooked.call("{\"cuisine\":\"Italian\"}", null);
@@ -89,10 +89,9 @@ class HookedToolCallbackTest {
 		final String[] capturedResult = { null };
 		final Duration[] capturedDuration = { null };
 
-		registry.on(AgentHookEvent.AFTER_TOOL_CALL, input -> {
-			HookInput.AfterToolCall atc = (HookInput.AfterToolCall) input;
-			capturedResult[0] = atc.toolResult();
-			capturedDuration[0] = atc.duration();
+		registry.on(AfterToolCall.class, event -> {
+			capturedResult[0] = event.toolResult();
+			capturedDuration[0] = event.duration();
 			return HookDecision.proceed();
 		});
 
@@ -109,9 +108,8 @@ class HookedToolCallbackTest {
 		when(delegate.call(any(String.class), any())).thenThrow(error);
 		final Exception[] capturedException = { null };
 
-		registry.on(AgentHookEvent.AFTER_TOOL_CALL, input -> {
-			HookInput.AfterToolCall atc = (HookInput.AfterToolCall) input;
-			capturedException[0] = atc.exception();
+		registry.on(AfterToolCall.class, event -> {
+			capturedException[0] = event.exception();
 			return HookDecision.proceed();
 		});
 
@@ -136,7 +134,7 @@ class HookedToolCallbackTest {
 
 	@Test
 	void blockedCallShouldAlsoBeRecordedInHistory() {
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, input -> HookDecision.block("denied"));
+		registry.on(BeforeToolCall.class, event -> HookDecision.block("denied"));
 
 		hooked.call("{}", null);
 

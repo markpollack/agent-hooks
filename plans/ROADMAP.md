@@ -60,143 +60,23 @@ Stage 3 refactors the core API from a closed enum+sealed-interface dual hierarch
 
 ---
 
-## Stage 3: Event Hierarchy Refactoring (v0.1 → v0.2)
+## Stage 3: Event Hierarchy Refactoring (v0.1 → v0.2) (COMPLETE)
 
-### Step 3.0: Refactoring Entry — Design Verification
+### Step 3.0: Refactoring Entry — Design Verification (COMPLETE)
 
-**Entry criteria**:
-- [ ] Read: `plans/DESIGN.md` — v0.2 type system
-- [ ] Read: `plans/review.md` — decision rationale
-- [ ] Read: `plans/learnings/LEARNINGS.md`
+**Work items**: Reviewed v0.2 design, mapped all file deltas (6 create, 2 delete, 6 modify), verified ArchUnit rules.
 
-**Work items**:
-- [ ] REVIEW v0.2 design against current source code — identify all files that change
-- [ ] MAP the exact delta: which files are created, modified, deleted
-- [ ] VERIFY ArchUnit rules still make sense for new package structure
-- [ ] DOCUMENT the migration plan (file-by-file)
+### Step 3.1-3.2: Core Event Types + Registry Refactoring (COMPLETE)
 
-**Exit criteria**:
-- [ ] Migration plan documented
-- [ ] Create: `plans/learnings/step-3.0-refactoring-entry.md`
-- [ ] Update `ROADMAP.md` checkboxes
+**Work items**: Created `HookEvent`/`ToolEvent` interfaces + 4 event records. Deleted `AgentHookEvent` enum + `HookInput` sealed interface. Made `AgentHook` generic. Rewrote `AgentHookRegistry` with type-based dispatch, reverse ordering for AfterToolCall, runtime enforcement for non-tool events. 15 core tests (10 ported + 5 new).
 
----
+### Step 3.3: Spring Adapter Update (COMPLETE)
 
-### Step 3.1: Core Event Types (replace enum + sealed interface)
+**Work items**: Updated `HookedToolCallback` to construct event records directly. Updated 4 test files to v0.2 registration API. `HookedToolCallbackProvider`, `HookedTools`, auto-config unchanged. All ArchUnit rules pass without changes.
 
-**Entry criteria**:
-- [ ] Step 3.0 complete
-- [ ] Read: `plans/learnings/step-3.0-refactoring-entry.md`
+### Step 3.K: Stage 3 Consolidation + Local Install (COMPLETE)
 
-**Work items**:
-- [ ] CREATE `HookEvent` unsealed interface (`context(): HookContext`)
-- [ ] CREATE `ToolEvent` sub-interface (`toolName(): String`, `toolInput(): String`)
-- [ ] CONVERT `BeforeToolCall` from `HookInput` record → `ToolEvent` record
-- [ ] CONVERT `AfterToolCall` from `HookInput` record → `ToolEvent` record
-- [ ] CONVERT `SessionStart` from `HookInput` record → `HookEvent` record
-- [ ] CONVERT `SessionEnd` from `HookInput` record → `HookEvent` record
-- [ ] DELETE `AgentHookEvent` enum
-- [ ] DELETE `HookInput` sealed interface
-- [ ] UPDATE `AgentHook` — make generic: `<E extends HookEvent> HookDecision handle(E event)`
-- [ ] UPDATE `package-info.java` files for any package moves
-- [ ] UPDATE unit tests: `HookContextTest` (may reference old types)
-- [ ] WRITE new tests for `HookEvent`/`ToolEvent` interface contracts
-- [ ] VERIFY: `./mvnw compile -pl agent-hooks-core`
-- [ ] COMMIT
-
-**Exit criteria**:
-- [ ] Core compiles with new event hierarchy
-- [ ] No references to `AgentHookEvent` or `HookInput` remain in core
-- [ ] Create: `plans/learnings/step-3.1-core-events.md`
-- [ ] Update `CLAUDE.md` with distilled learnings
-- [ ] Update `ROADMAP.md` checkboxes
-
----
-
-### Step 3.2: Registry Refactoring (type-based dispatch)
-
-**Entry criteria**:
-- [ ] Step 3.1 complete
-- [ ] Read: `plans/learnings/step-3.1-core-events.md`
-
-**Work items**:
-- [ ] REFACTOR `AgentHookRegistry`:
-  - `on(Class<E>, AgentHook<E>)` — type-based registration
-  - `on(Class<E>, int priority, AgentHook<E>)` — with priority
-  - `onTool(String pattern, Class<E extends ToolEvent>, AgentHook<E>)` — type-safe tool pattern
-  - `dispatch(HookEvent)` — routes by `event.getClass()`, returns `HookDecision`
-  - Reverse priority order for "after" events (AfterToolCall)
-  - Runtime enforcement: Block/Modify/Retry on non-ToolEvent → log warning, treat as Proceed
-- [ ] UPDATE `AgentHookRegistryTest`:
-  - Type-based registration and dispatch
-  - Reverse ordering for AfterToolCall
-  - Runtime enforcement for non-tool decisions
-  - Tool pattern matching with ToolEvent type constraint
-  - All existing semantics (priority, Block short-circuit, Modify chaining, exception handling)
-- [ ] VERIFY: `./mvnw test -pl agent-hooks-core`
-- [ ] COMMIT
-
-**Exit criteria**:
-- [ ] Registry fully functional with type-based dispatch
-- [ ] Reverse ordering for after events tested
-- [ ] Runtime enforcement for non-tool decisions tested
-- [ ] `./mvnw test -pl agent-hooks-core` green
-- [ ] Create: `plans/learnings/step-3.2-registry-refactoring.md`
-- [ ] Update `CLAUDE.md` with distilled learnings
-- [ ] Update `ROADMAP.md` checkboxes
-
----
-
-### Step 3.3: Spring Adapter Update
-
-**Entry criteria**:
-- [ ] Step 3.2 complete
-- [ ] Read: `plans/learnings/step-3.2-registry-refactoring.md`
-
-**Work items**:
-- [ ] UPDATE `HookedToolCallback`:
-  - Construct `BeforeToolCall` / `AfterToolCall` event records instead of `HookInput` records
-  - Call `registry.dispatch(event)` instead of `registry.dispatch(enum, input)`
-- [ ] UPDATE `HookedToolCallbackProvider` (if needed)
-- [ ] UPDATE `HookedTools` (if needed)
-- [ ] UPDATE `AgentHooksAutoConfiguration` (if needed)
-- [ ] UPDATE all Spring module tests
-- [ ] UPDATE ArchUnit rules if package structure changed
-- [ ] VERIFY: `./mvnw test` (both modules)
-- [ ] VERIFY: JaCoCo coverage still passes (80% core, 70% spring)
-- [ ] COMMIT
-
-**Exit criteria**:
-- [ ] Spring adapter works with new event hierarchy
-- [ ] All 45+ tests green
-- [ ] Coverage thresholds met
-- [ ] Create: `plans/learnings/step-3.3-spring-adapter-update.md`
-- [ ] Update `CLAUDE.md` with distilled learnings
-- [ ] Update `ROADMAP.md` checkboxes
-
----
-
-### Step 3.K: Stage 3 Consolidation + Local Install
-
-**Entry criteria**:
-- [ ] All Stage 3 steps complete
-- [ ] Read: all `plans/learnings/step-3.*` files
-
-**Work items**:
-- [ ] COMPACT learnings into `plans/learnings/LEARNINGS.md`
-- [ ] UPDATE `CLAUDE.md` with v0.2 architecture summary
-- [ ] UPDATE Javadoc on all public types
-- [ ] RUN `./mvnw clean install` — install updated 0.1.0-SNAPSHOT to `~/.m2`
-- [ ] VERIFY both artifacts in `~/.m2/repository/io/github/markpollack/`
-- [ ] COMMIT
-
-**Exit criteria**:
-- [ ] Library installed locally with v0.2 event hierarchy
-- [ ] `LEARNINGS.md` covers Stages 1-3
-- [ ] Create: `plans/learnings/step-3.K-stage3-summary.md`
-- [ ] Update `CLAUDE.md` with distilled learnings
-- [ ] Update `ROADMAP.md` checkboxes
-- [ ] COMMIT
+**Work items**: LEARNINGS.md updated, `./mvnw clean install` to ~/.m2, learnings file created.
 
 ---
 

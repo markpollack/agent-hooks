@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.markpollack.hooks.decision.HookContext;
 import io.github.markpollack.hooks.decision.HookDecision;
-import io.github.markpollack.hooks.event.AgentHookEvent;
+import io.github.markpollack.hooks.event.SessionStart;
 import io.github.markpollack.hooks.registry.AgentHookRegistry;
 import io.github.markpollack.hooks.spi.AgentHookProvider;
 import org.junit.jupiter.api.Test;
@@ -30,8 +30,7 @@ class AgentHooksAutoConfigurationTest {
 			// Verify provider was registered
 			AgentHookRegistry registry = context.getBean(AgentHookRegistry.class);
 			HookContext hookContext = context.getBean(HookContext.class);
-			HookDecision decision = registry.dispatch(AgentHookEvent.SESSION_START,
-					new io.github.markpollack.hooks.event.HookInput.SessionStart("test", hookContext));
+			HookDecision decision = registry.dispatch(new SessionStart("test", hookContext));
 			assertThat(decision).isInstanceOf(HookDecision.Proceed.class);
 		});
 	}
@@ -66,7 +65,7 @@ class AgentHooksAutoConfigurationTest {
 		@Bean
 		AgentHookProvider testProvider() {
 			return registry -> {
-				registry.on(AgentHookEvent.SESSION_START, input -> HookDecision.proceed());
+				registry.on(SessionStart.class, event -> HookDecision.proceed());
 			};
 		}
 

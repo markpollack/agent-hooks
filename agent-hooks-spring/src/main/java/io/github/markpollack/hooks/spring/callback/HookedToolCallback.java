@@ -6,8 +6,8 @@ import java.time.Instant;
 import io.github.markpollack.hooks.decision.HookContext;
 import io.github.markpollack.hooks.decision.HookDecision;
 import io.github.markpollack.hooks.decision.ToolCallRecord;
-import io.github.markpollack.hooks.event.AgentHookEvent;
-import io.github.markpollack.hooks.event.HookInput;
+import io.github.markpollack.hooks.event.AfterToolCall;
+import io.github.markpollack.hooks.event.BeforeToolCall;
 import io.github.markpollack.hooks.registry.AgentHookRegistry;
 import org.jspecify.annotations.Nullable;
 
@@ -17,9 +17,8 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.ai.tool.metadata.ToolMetadata;
 
 /**
- * Wraps a {@link ToolCallback} with hook dispatch. Fires
- * {@link AgentHookEvent#BEFORE_TOOL_CALL} before execution and
- * {@link AgentHookEvent#AFTER_TOOL_CALL} after execution.
+ * Wraps a {@link ToolCallback} with hook dispatch. Fires {@link BeforeToolCall} before
+ * execution and {@link AfterToolCall} after execution.
  *
  * <p>
  * On {@link HookDecision.Block}: returns the block reason as the tool result and never
@@ -66,9 +65,8 @@ public class HookedToolCallback implements ToolCallback {
 		String toolName = getToolDefinition().name();
 		String effectiveInput = toolInput;
 
-		// BEFORE_TOOL_CALL dispatch
-		HookInput.BeforeToolCall beforeInput = new HookInput.BeforeToolCall(toolName, toolInput, hookContext);
-		HookDecision beforeDecision = registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL, beforeInput);
+		// BeforeToolCall dispatch
+		HookDecision beforeDecision = registry.dispatch(new BeforeToolCall(toolName, toolInput, hookContext));
 
 		if (beforeDecision instanceof HookDecision.Block block) {
 			hookContext.recordToolCall(new ToolCallRecord(toolName, toolInput, block.reason(), Duration.ZERO,
@@ -92,10 +90,8 @@ public class HookedToolCallback implements ToolCallback {
 		}
 		Duration duration = Duration.between(start, Instant.now());
 
-		// AFTER_TOOL_CALL dispatch
-		HookInput.AfterToolCall afterInput = new HookInput.AfterToolCall(toolName, effectiveInput, result, duration,
-				exception, hookContext);
-		registry.dispatch(AgentHookEvent.AFTER_TOOL_CALL, afterInput);
+		// AfterToolCall dispatch
+		registry.dispatch(new AfterToolCall(toolName, effectiveInput, result, duration, exception, hookContext));
 
 		// Record in history
 		hookContext.recordToolCall(

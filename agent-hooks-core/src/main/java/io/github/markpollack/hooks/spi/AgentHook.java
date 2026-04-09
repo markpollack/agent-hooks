@@ -1,7 +1,7 @@
 package io.github.markpollack.hooks.spi;
 
 import io.github.markpollack.hooks.decision.HookDecision;
-import io.github.markpollack.hooks.event.HookInput;
+import io.github.markpollack.hooks.event.HookEvent;
 
 /**
  * A hook that handles agent events and returns a decision.
@@ -17,15 +17,27 @@ import io.github.markpollack.hooks.event.HookInput;
  * <p>
  * If a hook throws an unchecked exception, the registry treats it as
  * {@link HookDecision#proceed()}.
+ *
+ * <p>
+ * Example usage:
+ * <pre>{@code
+ * registry.on(BeforeToolCall.class, event -> {
+ *     if (event.toolName().equals("bookTable"))
+ *         return HookDecision.block("Over budget");
+ *     return HookDecision.proceed();
+ * });
+ * }</pre>
+ *
+ * @param <E> the event type this hook handles
  */
 @FunctionalInterface
-public interface AgentHook {
+public interface AgentHook<E extends HookEvent> {
 
 	/**
 	 * Handle an agent event and return a decision.
-	 * @param input the event-specific input
+	 * @param event the event
 	 * @return the decision (never null)
 	 */
-	HookDecision handle(HookInput input);
+	HookDecision handle(E event);
 
 }

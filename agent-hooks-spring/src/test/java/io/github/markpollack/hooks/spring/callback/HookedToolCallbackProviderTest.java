@@ -2,7 +2,7 @@ package io.github.markpollack.hooks.spring.callback;
 
 import io.github.markpollack.hooks.decision.HookContext;
 import io.github.markpollack.hooks.decision.HookDecision;
-import io.github.markpollack.hooks.event.AgentHookEvent;
+import io.github.markpollack.hooks.event.BeforeToolCall;
 import io.github.markpollack.hooks.registry.AgentHookRegistry;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +43,7 @@ class HookedToolCallbackProviderTest {
 		AgentHookRegistry registry = new AgentHookRegistry();
 		HookContext hookContext = new HookContext();
 		final boolean[] hookFired = { false };
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, input -> {
+		registry.on(BeforeToolCall.class, event -> {
 			hookFired[0] = true;
 			return HookDecision.proceed();
 		});

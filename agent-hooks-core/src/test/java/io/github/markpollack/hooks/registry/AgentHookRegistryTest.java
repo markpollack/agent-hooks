@@ -6,8 +6,9 @@ import java.util.List;
 
 import io.github.markpollack.hooks.decision.HookContext;
 import io.github.markpollack.hooks.decision.HookDecision;
-import io.github.markpollack.hooks.event.AgentHookEvent;
-import io.github.markpollack.hooks.event.HookInput;
+import io.github.markpollack.hooks.event.AfterToolCall;
+import io.github.markpollack.hooks.event.BeforeToolCall;
+import io.github.markpollack.hooks.event.SessionStart;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -28,8 +29,7 @@ class AgentHookRegistryTest {
 
 	@Test
 	void dispatchShouldReturnProceedWhenNoHooksRegistered() {
-		HookInput input = new HookInput.BeforeToolCall("searchRestaurants", "{}", hookContext);
-		HookDecision decision = registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL, input);
+		HookDecision decision = registry.dispatch(new BeforeToolCall("searchRestaurants", "{}", hookContext));
 		assertThat(decision).isInstanceOf(HookDecision.Proceed.class);
 	}
 
@@ -37,21 +37,20 @@ class AgentHookRegistryTest {
 	void dispatchShouldInvokeHooksInPriorityOrder() {
 		List<String> order = new ArrayList<>();
 
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, 200, input -> {
+		registry.on(BeforeToolCall.class, 200, event -> {
 			order.add("second");
 			return HookDecision.proceed();
 		});
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, 50, input -> {
+		registry.on(BeforeToolCall.class, 50, event -> {
 			order.add("first");
 			return HookDecision.proceed();
 		});
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, 300, input -> {
+		registry.on(BeforeToolCall.class, 300, event -> {
 			order.add("third");
 			return HookDecision.proceed();
 		});
 
-		registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL,
-				new HookInput.BeforeToolCall("tool", "{}", hookContext));
+		registry.dispatch(new BeforeToolCall("tool", "{}", hookContext));
 
 		assertThat(order).containsExactly("first", "second", "third");
 	}
@@ -60,17 +59,16 @@ class AgentHookRegistryTest {
 	void blockShouldShortCircuitRemainingHooks() {
 		List<String> invoked = new ArrayList<>();
 
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, 10, input -> {
+		registry.on(BeforeToolCall.class, 10, event -> {
 			invoked.add("first");
 			return HookDecision.block("blocked");
 		});
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, 20, input -> {
+		registry.on(BeforeToolCall.class, 20, event -> {
 			invoked.add("second");
 			return HookDecision.proceed();
 		});
 
-		HookDecision decision = registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL,
-				new HookInput.BeforeToolCall("tool", "{}", hookContext));
+		HookDecision decision = registry.dispatch(new BeforeToolCall("tool", "{}", hookContext));
 
 		assertThat(decision).isInstanceOf(HookDecision.Block.class);
 		assertThat(((HookDecision.Block) decision).reason()).isEqualTo("blocked");
@@ -79,17 +77,14 @@ class AgentHookRegistryTest {
 
 	@Test
 	void modifyShouldChainToSubsequentHooks() {
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, 10, input -> {
-			return HookDecision.modify("{\"modified\": true}");
-		});
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, 20, input -> {
-			HookInput.BeforeToolCall btc = (HookInput.BeforeToolCall) input;
-			assertThat(btc.toolInput()).isEqualTo("{\"modified\": true}");
+		registry.on(BeforeToolCall.class, 10, event -> HookDecision.modify("{\"modified\": true}"));
+		registry.on(BeforeToolCall.class, 20, event -> {
+			assertThat(event.toolInput()).isEqualTo("{\"modified\": true}");
 			return HookDecision.proceed();
 		});
 
-		HookDecision decision = registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL,
-				new HookInput.BeforeToolCall("tool", "{\"original\": true}", hookContext));
+		HookDecision decision = registry
+			.dispatch(new BeforeToolCall("tool", "{\"original\": true}", hookContext));
 
 		assertThat(decision).isInstanceOf(HookDecision.Proceed.class);
 	}
@@ -98,49 +93,46 @@ class AgentHookRegistryTest {
 	void toolPatternShouldMatchOnlyMatchingTools() {
 		List<String> invoked = new ArrayList<>();
 
-		registry.onTool("search.*", AgentHookEvent.BEFORE_TOOL_CALL, input -> {
+		registry.onTool("search.*", BeforeToolCall.class, event -> {
 			invoked.add("search-hook");
 			return HookDecision.proceed();
 		});
 
-		registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL,
-				new HookInput.BeforeToolCall("searchRestaurants", "{}", hookContext));
-		registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL,
-				new HookInput.BeforeToolCall("bookTable", "{}", hookContext));
+		registry.dispatch(new BeforeToolCall("searchRestaurants", "{}", hookContext));
+		registry.dispatch(new BeforeToolCall("bookTable", "{}", hookContext));
 
 		assertThat(invoked).containsExactly("search-hook");
 	}
 
 	@Test
 	void exceptionInHookShouldBeTreatedAsProceed() {
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, 10, input -> {
+		registry.on(BeforeToolCall.class, 10, event -> {
 			throw new RuntimeException("hook failure");
 		});
 
-		HookDecision decision = registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL,
-				new HookInput.BeforeToolCall("tool", "{}", hookContext));
+		HookDecision decision = registry.dispatch(new BeforeToolCall("tool", "{}", hookContext));
 
 		assertThat(decision).isInstanceOf(HookDecision.Proceed.class);
 	}
 
 	@Test
 	void retryShouldThrowOnBeforeToolCall() {
-		registry.on(AgentHookEvent.BEFORE_TOOL_CALL, input -> HookDecision.retry("retry"));
+		registry.on(BeforeToolCall.class, event -> HookDecision.retry("retry"));
 
-		assertThatThrownBy(() -> registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL,
-				new HookInput.BeforeToolCall("tool", "{}", hookContext)))
+		assertThatThrownBy(() -> registry.dispatch(new BeforeToolCall("tool", "{}", hookContext)))
 			.isInstanceOf(IllegalStateException.class)
-			.hasMessageContaining("Retry is only valid for AFTER_TOOL_CALL");
+			.hasMessageContaining("Retry is only valid for AfterToolCall");
 	}
 
 	@Test
-	void blockShouldThrowOnAfterToolCall() {
-		registry.on(AgentHookEvent.AFTER_TOOL_CALL, input -> HookDecision.block("no"));
+	void retryShouldBeValidForAfterToolCall() {
+		registry.on(AfterToolCall.class, event -> HookDecision.retry("try again"));
 
-		assertThatThrownBy(() -> registry.dispatch(AgentHookEvent.AFTER_TOOL_CALL,
-				new HookInput.AfterToolCall("tool", "{}", "result", Duration.ofMillis(10), null, hookContext)))
-			.isInstanceOf(IllegalStateException.class)
-			.hasMessageContaining("Block is only valid for BEFORE_TOOL_CALL");
+		HookDecision decision = registry
+			.dispatch(new AfterToolCall("tool", "{}", "result", Duration.ofMillis(10), null, hookContext));
+
+		assertThat(decision).isInstanceOf(HookDecision.Retry.class);
+		assertThat(((HookDecision.Retry) decision).reason()).isEqualTo("try again");
 	}
 
 	@Test
@@ -148,26 +140,82 @@ class AgentHookRegistryTest {
 		List<String> invoked = new ArrayList<>();
 
 		registry.register(reg -> {
-			reg.on(AgentHookEvent.SESSION_START, input -> {
+			reg.on(SessionStart.class, event -> {
 				invoked.add("session-hook");
 				return HookDecision.proceed();
 			});
 		});
 
-		registry.dispatch(AgentHookEvent.SESSION_START, new HookInput.SessionStart("session-1", hookContext));
+		registry.dispatch(new SessionStart("session-1", hookContext));
 
 		assertThat(invoked).containsExactly("session-hook");
 	}
 
+	// --- New v0.2 tests ---
+
 	@Test
-	void retryShouldBeValidForAfterToolCall() {
-		registry.on(AgentHookEvent.AFTER_TOOL_CALL, input -> HookDecision.retry("try again"));
+	void afterToolCallShouldDispatchInReversePriorityOrder() {
+		List<String> order = new ArrayList<>();
 
-		HookDecision decision = registry.dispatch(AgentHookEvent.AFTER_TOOL_CALL,
-				new HookInput.AfterToolCall("tool", "{}", "result", Duration.ofMillis(10), null, hookContext));
+		registry.on(AfterToolCall.class, 50, event -> {
+			order.add("priority-50");
+			return HookDecision.proceed();
+		});
+		registry.on(AfterToolCall.class, 200, event -> {
+			order.add("priority-200");
+			return HookDecision.proceed();
+		});
+		registry.on(AfterToolCall.class, 100, event -> {
+			order.add("priority-100");
+			return HookDecision.proceed();
+		});
 
-		assertThat(decision).isInstanceOf(HookDecision.Retry.class);
-		assertThat(((HookDecision.Retry) decision).reason()).isEqualTo("try again");
+		registry.dispatch(new AfterToolCall("tool", "{}", "result", Duration.ofMillis(10), null, hookContext));
+
+		assertThat(order).containsExactly("priority-200", "priority-100", "priority-50");
+	}
+
+	@Test
+	void nonToolEventShouldTreatBlockAsProceed() {
+		registry.on(SessionStart.class, event -> HookDecision.block("should be ignored"));
+
+		HookDecision decision = registry.dispatch(new SessionStart("session-1", hookContext));
+
+		assertThat(decision).isInstanceOf(HookDecision.Proceed.class);
+	}
+
+	@Test
+	void nonToolEventShouldTreatModifyAsProceed() {
+		registry.on(SessionStart.class, event -> HookDecision.modify("modified"));
+
+		HookDecision decision = registry.dispatch(new SessionStart("session-1", hookContext));
+
+		assertThat(decision).isInstanceOf(HookDecision.Proceed.class);
+	}
+
+	@Test
+	void nonToolEventShouldTreatRetryAsProceed() {
+		registry.on(SessionStart.class, event -> HookDecision.retry("retry"));
+
+		HookDecision decision = registry.dispatch(new SessionStart("session-1", hookContext));
+
+		assertThat(decision).isInstanceOf(HookDecision.Proceed.class);
+	}
+
+	@Test
+	void toolPatternShouldWorkWithAfterToolCall() {
+		List<String> invoked = new ArrayList<>();
+
+		registry.onTool("book.*", AfterToolCall.class, event -> {
+			invoked.add("book-after-hook");
+			return HookDecision.proceed();
+		});
+
+		registry.dispatch(new AfterToolCall("bookTable", "{}", "ok", Duration.ofMillis(10), null, hookContext));
+		registry.dispatch(
+				new AfterToolCall("searchRestaurants", "{}", "found", Duration.ofMillis(10), null, hookContext));
+
+		assertThat(invoked).containsExactly("book-after-hook");
 	}
 
 }

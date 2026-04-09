@@ -38,32 +38,45 @@
 | DESIGN.md | `plans/DESIGN.md` | Before implementation |
 | ROADMAP.md | `plans/ROADMAP.md` | Before starting any step |
 
-## Architecture
+## Architecture (v0.2)
 
 ```
 agent-hooks-core (pure Java)
-├── AgentHookEvent          — BEFORE_TOOL_CALL, AFTER_TOOL_CALL, SESSION_START, SESSION_END
-├── HookInput (sealed)      — BeforeToolCall, AfterToolCall, SessionStart, SessionEnd
-├── HookDecision (sealed)   — Proceed, Block, Modify, Retry
-├── AgentHook               — @FunctionalInterface: HookDecision handle(HookInput)
-├── AgentHookProvider       — registerHooks(AgentHookRegistry)
-├── AgentHookRegistry       — on(), onTool(), dispatch() with priority + short-circuit
-└── HookContext             — Mutable session state + tool call history
+├── event/
+│   ├── HookEvent            — Unsealed interface (context(): HookContext)
+│   ├── ToolEvent            — Sub-interface (toolName(), toolInput())
+│   ├── BeforeToolCall       — record implements ToolEvent
+│   ├── AfterToolCall        — record implements ToolEvent (+result, duration, exception)
+│   ├── SessionStart         — record implements HookEvent (observation-only)
+│   └── SessionEnd           — record implements HookEvent (observation-only)
+├── decision/
+│   ├── HookDecision         — sealed: Proceed, Block, Modify, Retry
+│   ├── HookContext          — Mutable session state + tool call history
+│   └── ToolCallRecord       — Immutable record of a tool execution
+├── spi/
+│   ├── AgentHook<E>         — @FunctionalInterface: HookDecision handle(E event)
+│   └── AgentHookProvider    — registerHooks(AgentHookRegistry)
+└── registry/
+    └── AgentHookRegistry    — on(Class<E>, hook), onTool(), dispatch(HookEvent)
 
 agent-hooks-spring (Spring AI adapter)
-├── HookedToolCallback      — Wraps ToolCallback with before/after hook dispatch
+├── HookedToolCallback       — Wraps ToolCallback with before/after hook dispatch
 ├── HookedToolCallbackProvider — Wraps all ToolCallbackProviders
+├── HookedTools              — Static utility: wrap(registry, context, toolObjects...)
 └── AgentHooksAutoConfiguration — Spring Boot auto-config
 ```
 
 ## Key Design Decisions
 
 1. **Core has zero dependencies** — portable across Spring AI, Claude SDK, any Java agent runtime
-2. **Sealed interfaces** for HookInput and HookDecision — exhaustive, type-safe dispatch
-3. **Block short-circuits** — security hooks can't be overridden by later hooks
-4. **Modify chains** — subsequent hooks see modified input
-5. **HookContext** (not ToolContext) for session state — ToolContext is immutable in Spring AI
-6. **Model-call events** deferred to Spring adapter only — not portable across CLIs
+2. **Open event hierarchy** (v0.2) — `HookEvent` is unsealed, event IS the input (no parallel hierarchies)
+3. **Generic `AgentHook<E>`** — type-safe registration: `registry.on(BeforeToolCall.class, event -> ...)`
+4. **Block short-circuits** — security hooks can't be overridden by later hooks
+5. **Modify chains** — subsequent hooks see modified input
+6. **Reverse priority for AfterToolCall** — cleanup ordering (highest priority last)
+7. **Runtime enforcement** — Block/Modify/Retry on non-ToolEvent → treated as Proceed
+8. **HookContext** (not ToolContext) for session state — ToolContext is immutable in Spring AI
+9. **Model-call events** deferred to Spring adapter only — not portable across CLIs
 
 ## Integration Context
 
@@ -96,9 +109,11 @@ agent-hooks-spring (Spring AI adapter)
 
 ## Core API Summary
 
-- 8 source files in `agent-hooks-core`: AgentHookEvent, HookDecision (sealed), ToolCallRecord, HookContext, HookInput (sealed), AgentHook, AgentHookProvider, AgentHookRegistry
-- Registry dispatch: priority ordering → Block short-circuits → Modify chains → exception = Proceed
-- Default priority: 100. Tool pattern via regex. Retry only for AFTER_TOOL_CALL.
+- 10 source files in `agent-hooks-core`: HookEvent, ToolEvent, BeforeToolCall, AfterToolCall, SessionStart, SessionEnd, HookDecision (sealed), HookContext, AgentHook<E>, AgentHookProvider, AgentHookRegistry
+- Registry: `Map<Class<?>, List<PrioritizedHook<?>>>` — type-based dispatch with unchecked cast (safe via public API pairing)
+- Registration: `on(Class<E>, hook)`, `on(Class<E>, priority, hook)`, `onTool(pattern, Class<E extends ToolEvent>, hook)`
+- Dispatch: `dispatch(HookEvent)` → priority ordering → Block short-circuits → Modify chains → exception = Proceed
+- AfterToolCall: reverse priority order. Default priority: 100. Tool pattern via regex. Retry only for AfterToolCall.
 
 ## Spring Adapter Summary
 

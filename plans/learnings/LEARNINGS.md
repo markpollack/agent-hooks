@@ -34,3 +34,22 @@
 
 ### Test count
 - 35 total: 22 core + 9 HookedToolCallback + 4 auto-config
+
+## Stage 3: Event Hierarchy Refactoring (v0.1 → v0.2)
+
+### Design decision
+- Option B (open event hierarchy) chosen over closed enum — matches Strands SDK pattern
+- Event IS the input — eliminated parallel `AgentHookEvent` enum + `HookInput` sealed interface
+- `HookEvent` (unsealed) → `ToolEvent` (sub-interface) → `BeforeToolCall`/`AfterToolCall` records
+- Non-tool events: `SessionStart`, `SessionEnd` implement `HookEvent` directly
+
+### Registry changes
+- Type-based dispatch: `Map<Class<?>, List<PrioritizedHook<?>>>` with unchecked cast at dispatch (safe via public API pairing)
+- Single-arg `dispatch(HookEvent)` — event carries its own data
+- `AfterToolCall` dispatches in reverse priority order (cleanup ordering)
+- Non-ToolEvent decisions (Block/Modify/Retry) → treated as Proceed (runtime enforcement)
+
+### Migration pattern
+- `AgentHook<E extends HookEvent>` — generic functional interface, lambdas capture type from Class<E>
+- Registration: `registry.on(BeforeToolCall.class, event -> ...)` (typed, no casts at call site)
+- Spring adapter: minimal changes — just import updates and constructor calls
