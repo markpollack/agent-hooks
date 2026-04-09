@@ -99,7 +99,15 @@ agent-hooks-spring (Spring AI adapter)
 - 8 source files in `agent-hooks-core`: AgentHookEvent, HookDecision (sealed), ToolCallRecord, HookContext, HookInput (sealed), AgentHook, AgentHookProvider, AgentHookRegistry
 - Registry dispatch: priority ordering → Block short-circuits → Modify chains → exception = Proceed
 - Default priority: 100. Tool pattern via regex. Retry only for AFTER_TOOL_CALL.
-- 22 tests passing
+
+## Spring Adapter Summary
+
+- `HookedToolCallback`: wraps ToolCallback with BEFORE/AFTER dispatch. Block returns reason as result. Modify passes modified input.
+- `HookedToolCallbackProvider`: wraps ToolCallbackProvider — each callback becomes HookedToolCallback
+- `HookedTools.wrap(registry, hookContext, toolObjects...)`: main entry point for workshop usage
+- `AgentHooksAutoConfiguration`: creates registry from AgentHookProvider beans + default HookContext
+- Build from reactor root (`./mvnw test`), not `-pl agent-hooks-spring` alone
+- 35 tests total (22 core + 13 spring)
 
 ## Session Behavior
 
