@@ -80,9 +80,13 @@ Adapter event records (agent-hooks-spring, future):
   BeforeModelCall implements HookEvent    — adapter-specific
   AfterModelCall  implements HookEvent    — adapter-specific
 
-External adapter events (separate repos, future):
-  PreCompact      implements HookEvent    — Claude SDK adapter
-  SubagentStop    implements HookEvent    — Claude SDK adapter
+Claude adapter events (agent-hooks-claude):
+  UserPromptSubmit implements HookEvent   — observation-only
+  AgentStop        implements HookEvent   — observation-only
+  SubagentStop     implements HookEvent   — observation-only
+  PreCompact       implements HookEvent   — observation-only (@Nullable trigger, customInstructions)
+
+External adapter events (future):
   BeforeNodeCall  implements HookEvent    — Strands adapter
 
 HookDecision    sealed: Proceed | Block(reason) | Modify(modifiedInput) | Retry(reason)

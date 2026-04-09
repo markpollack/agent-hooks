@@ -53,3 +53,34 @@
 - `AgentHook<E extends HookEvent>` — generic functional interface, lambdas capture type from Class<E>
 - Registration: `registry.on(BeforeToolCall.class, event -> ...)` (typed, no casts at call site)
 - Spring adapter: minimal changes — just import updates and constructor calls
+
+## Stage 5: Claude Agent SDK Adapter
+
+### AgentHookBridge pattern
+- `AgentHookBridge.registerInto(HookRegistry)` — registers all 6 Claude hook callbacks unconditionally
+- Converts Claude SDK types (`HookInput` variants) to core events (`BeforeToolCall`/`AfterToolCall`) and Claude-specific events
+- `DecisionMapper` maps `HookDecision` → `HookOutput` (Proceed→allow, Block→block+deny, Modify→allow+modifyMap, Retry→warn+allow)
+- Duration tracking via `ConcurrentHashMap<String, Instant>` keyed by `toolUseId` — pre-hook captures start, post-hook computes delta
+- Per-session `HookContext` via `ConcurrentHashMap<String, HookContext>` keyed by `sessionId`
+
+### Claude-specific events
+- 4 new event records: `UserPromptSubmit`, `AgentStop`, `SubagentStop`, `PreCompact`
+- All implement `HookEvent` (not `ToolEvent`) — observation-only, Block/Modify/Retry treated as Proceed
+- `PreCompact.trigger()` and `PreCompact.customInstructions()` are `@Nullable`
+
+### Type conversions
+- `PreToolUseInput.toolInput()` is `Map<String,Object>` → serialized to JSON string via Jackson for `BeforeToolCall.toolInput()`
+- `HookDecision.Modify.modifiedInput()` (JSON string) → parsed back to `Map<String,Object>` for `HookSpecificOutput.preToolUseModify()`
+- `PostToolUseInput.toolResponse()` is `Object` → converted to String (pass-through if already String, else Jackson serialize)
+
+### Cross-adapter proof
+- Same `AgentHookProvider` (blocks "Bash") tested on both Claude and Spring paths — the value proposition
+- `agent-hooks-spring` is a test-only dependency in `agent-hooks-claude` — no runtime coupling
+
+### Java 17 compatibility
+- Switch pattern matching not available in Java 17 — use if/instanceof chains in DecisionMapper
+- `HookRegistry.registerSubagentStop()` and `registerPreCompact()` don't exist — use `register(HookEvent, toolPattern, callback)`
+
+### Test count
+- 23 tests in agent-hooks-claude (6 event + 11 bridge + 4 cross-adapter + 2 architecture)
+- 58 total across all modules (22 core + 13 spring + 23 claude)

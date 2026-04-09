@@ -6,6 +6,7 @@
 
 - **agent-hooks-core**: Pure Java 17 API — events, inputs, decisions, registry. Zero dependencies.
 - **agent-hooks-spring**: Spring AI adapter — wraps `ToolCallback` with hook dispatch, auto-configures via Spring Boot.
+- **agent-hooks-claude**: Claude Agent SDK adapter — bridges `AgentHookProvider` implementations to Claude CLI hooks via `AgentHookBridge`.
 
 **Group ID**: `io.github.markpollack` (candidate for `org.springaicommunity` once validated)
 
@@ -64,6 +65,16 @@ agent-hooks-spring (Spring AI adapter)
 ├── HookedToolCallbackProvider — Wraps all ToolCallbackProviders
 ├── HookedTools              — Static utility: wrap(registry, context, toolObjects...)
 └── AgentHooksAutoConfiguration — Spring Boot auto-config
+
+agent-hooks-claude (Claude Agent SDK adapter)
+├── event/
+│   ├── UserPromptSubmit     — record implements HookEvent (observation-only)
+│   ├── AgentStop            — record implements HookEvent (observation-only)
+│   ├── SubagentStop         — record implements HookEvent (observation-only)
+│   └── PreCompact           — record implements HookEvent (observation-only)
+└── bridge/
+    ├── AgentHookBridge      — registerInto(HookRegistry) — registers 6 callbacks
+    └── DecisionMapper       — HookDecision → HookOutput (package-private)
 ```
 
 ## Key Design Decisions
@@ -83,7 +94,7 @@ agent-hooks-spring (Spring AI adapter)
 | Project | Relationship |
 |---------|-------------|
 | Spring AI | Wraps ToolCallback — no core changes needed |
-| claude-agent-sdk-java | Adapter lives in that repo; imports agent-hooks-core |
+| claude-agent-sdk-java | Claude SDK provides hook types; agent-hooks-claude bridges to our registry |
 | agent-journal | Bridge: hook provider that logs events to a journal Run |
 | agent-harness | ChatClientStep gets hooks for free via Spring auto-config |
 
@@ -97,7 +108,7 @@ agent-hooks-spring (Spring AI adapter)
 
 - AssertJ for assertions
 - BDD-style test naming: `methodShouldBehaviorWhenCondition()`
-- Coverage targets: 80% core, 70% spring
+- Coverage targets: 80% core, 70% spring, 70% claude
 - BSL 1.1 license
 
 ## Not Covered
@@ -122,7 +133,17 @@ agent-hooks-spring (Spring AI adapter)
 - `HookedTools.wrap(registry, hookContext, toolObjects...)`: main entry point for workshop usage
 - `AgentHooksAutoConfiguration`: creates registry from AgentHookProvider beans + default HookContext
 - Build from reactor root (`./mvnw test`), not `-pl agent-hooks-spring` alone
-- 35 tests total (22 core + 13 spring)
+
+## Claude Adapter Summary
+
+- `AgentHookBridge`: registers 6 callbacks into Claude SDK `HookRegistry` — converts `HookInput` → core/Claude events → dispatches through `AgentHookRegistry` → maps `HookDecision` → `HookOutput`
+- `DecisionMapper`: Proceed→allow, Block→block+deny, Modify→allow+modifyMap, Retry→warn+allow
+- 4 Claude-specific events: `UserPromptSubmit`, `AgentStop`, `SubagentStop`, `PreCompact` — all observation-only
+- Duration tracking: `ConcurrentHashMap<toolUseId, Instant>` — pre-hook captures start, post-hook computes delta
+- Session isolation: `ConcurrentHashMap<sessionId, HookContext>` — one HookContext per Claude session
+- Claude SDK dependency is `provided` scope — users bring `claude-code-sdk` at runtime
+- Cross-adapter proof: same `AgentHookProvider` works on both Claude and Spring paths
+- 58 tests total (22 core + 13 spring + 23 claude)
 
 ## Session Behavior
 

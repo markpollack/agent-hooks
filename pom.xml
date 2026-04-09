@@ -36,6 +36,7 @@
     <modules>
         <module>agent-hooks-core</module>
         <module>agent-hooks-spring</module>
+        <module>agent-hooks-claude</module>
     </modules>
 
     <properties>
@@ -52,6 +53,7 @@
         <mockito.version>5.15.2</mockito.version>
         <archunit.version>1.4.1</archunit.version>
         <jspecify.version>1.0.0</jspecify.version>
+        <claude-code-sdk.version>1.0.0</claude-code-sdk.version>
 
         <!-- Plugin versions -->
         <owasp-dependency-check.version>12.1.0</owasp-dependency-check.version>
@@ -111,6 +113,13 @@
                 <artifactId>archunit-junit5</artifactId>
                 <version>${archunit.version}</version>
                 <scope>test</scope>
+            </dependency>
+
+            <!-- Claude Agent SDK -->
+            <dependency>
+                <groupId>org.springaicommunity</groupId>
+                <artifactId>claude-code-sdk</artifactId>
+                <version>${claude-code-sdk.version}</version>
             </dependency>
 
             <!-- Null Safety -->
