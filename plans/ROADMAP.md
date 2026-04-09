@@ -1,326 +1,182 @@
 # Roadmap: agent-hooks
 
 > **Created**: 2026-04-09T14:00-04:00
-> **Last updated**: 2026-04-09T14:00-04:00
-> **Design version**: 2026-04-09 (updated from 2026-03-23 scaffold)
+> **Last updated**: 2026-04-09T19:00-04:00
+> **Design version**: 2026-04-09T19:00-04:00 (v0.2 event hierarchy redesign)
 
 ## Overview
 
-Three stages: **Foundation** (POM fixes, license, core types), **Spring AI Adapter** (HookedToolCallback, auto-config, HookedTools utility), and **Workshop Integration** (new step in art-of-building-agents). The core types are implemented first so the Spring adapter can depend on a stable API. The workshop step validates the library end-to-end with a real agent.
+Four stages: **Foundation** (POM fixes, license, core types — complete), **Spring AI Adapter** (HookedToolCallback, auto-config — complete), **Event Hierarchy Refactoring** (v0.1→v0.2 type system redesign), and **Workshop Integration** (new step in art-of-building-agents — deferred).
 
-Pre-work: update VISION.md and DESIGN.md to reflect version alignment (Spring AI 2.0.0-M3, Boot 4.1.0-M2) and BSL 1.1 license before Stage 1 begins.
+Stage 3 refactors the core API from a closed enum+sealed-interface dual hierarchy to an open event hierarchy where the event IS the input. See `plans/DESIGN.md` for full rationale and `plans/review.md` for decision analysis.
 
 > **Before every commit**: Verify ALL exit criteria for the current step are met. Do NOT remove exit criteria to mark a step complete — fulfill them.
 
 ---
 
-## Stage 1: Foundation + Core API
+## Stage 1: Foundation + Core API (COMPLETE)
 
-### Step 1.0: Design Review + Version Alignment
+### Step 1.0: Design Review + Version Alignment (COMPLETE)
+
+**Work items**: Updated POMs (Spring AI 2.0.0-M3, Boot 4.1.0-M2), BSL 1.1 license, VISION.md, DESIGN.md.
+**Commit**: `9fc78f3`
+
+### Step 1.1: Core Types (COMPLETE)
+
+**Work items**: AgentHookEvent enum, HookDecision sealed interface, ToolCallRecord, HookContext, HookInput sealed interface, AgentHook, AgentHookProvider. 12 tests.
+**Commit**: `38a14c3`
+
+### Step 1.2: Registry + Dispatch Engine (COMPLETE)
+
+**Work items**: AgentHookRegistry with priority ordering, Block short-circuit, Modify chaining, tool pattern matching. 10 tests.
+**Commit**: `dc4b63a`
+
+### Step 1.K: Stage 1 Consolidation (COMPLETE)
+
+**Commit**: `383b43d`
+
+---
+
+## Stage 2: Spring AI Adapter (COMPLETE)
+
+### Step 2.0: Stage 2 Entry (COMPLETE)
+
+**Commit**: `6794f55`
+
+### Step 2.1: HookedToolCallback (COMPLETE)
+
+**Work items**: Wraps ToolCallback with BEFORE/AFTER dispatch. Block/Modify/Proceed semantics. 9 tests.
+**Commit**: `fb31a4d`
+
+### Step 2.2: Provider, Utility, Auto-Configuration (COMPLETE)
+
+**Work items**: HookedToolCallbackProvider, HookedTools, AgentHooksAutoConfiguration, META-INF imports. 4 auto-config tests.
+**Commit**: `d8aff47`
+
+### Step 2.K: Stage 2 Consolidation + Local Install (COMPLETE)
+
+**Work items**: LEARNINGS.md, `./mvnw clean install` to ~/.m2. Quality commit: JaCoCo, ArchUnit, JSpecify, OWASP, Javadoc.
+**Commits**: `5f083f8`, `f160e8d`
+
+---
+
+## Stage 3: Event Hierarchy Refactoring (v0.1 → v0.2)
+
+### Step 3.0: Refactoring Entry — Design Verification
 
 **Entry criteria**:
-- [x] Read: `plans/DESIGN.md`
-- [x] Read: `plans/VISION.md`
-
-**Work items**:
-- [x] UPDATE `pom.xml` versions: `spring-ai.version` → `2.0.0-M3`, `spring-boot.version` → `4.1.0-M2`
-- [x] UPDATE `pom.xml` license block: Apache 2.0 → BSL 1.1 (match `~/projects/agent-journal/pom.xml`)
-- [x] CREATE `LICENSE` file (BSL 1.1, Licensed Work: "Agent Hooks", Change Date: 2029-04-01, template from `~/projects/agent-journal/LICENSE`)
-- [x] UPDATE `plans/VISION.md`: change constraints section from Apache 2.0 → BSL 1.1, update Spring AI version references
-- [x] UPDATE `plans/DESIGN.md`: update Build Coordinates table (Spring AI 2.0.0-M3, Spring Boot 4.1.0-M2), verify ToolCallback API matches Spring AI 2.0.0-M3
-- [x] VERIFY `ToolCallback.call(String, ToolContext)` signature in Spring AI 2.0.0-M3 source (`~/projects/spring-ai`)
-- [x] VERIFY scaffold compiles: `./mvnw compile -q`
-- [x] COMMIT
-
-**Exit criteria**:
-- [x] POMs aligned with workshop versions (Spring AI 2.0.0-M3, Boot 4.1.0-M2)
-- [x] BSL 1.1 license in place
-- [x] VISION.md and DESIGN.md updated
-- [x] Scaffold compiles with updated dependencies
-- [x] Create: `plans/learnings/step-1.0-design-review.md`
-- [x] Update `CLAUDE.md` with distilled learnings
-- [x] Update `ROADMAP.md` checkboxes
-- [x] COMMIT
-
----
-
-### Step 1.1: Core Types
-
-**Entry criteria**:
-- [x] Step 1.0 complete
-- [x] Read: `plans/learnings/step-1.0-design-review.md`
-- [x] Read: `plans/DESIGN.md` — Interfaces and Data Models sections
-
-**Work items**:
-- [x] IMPLEMENT `AgentHookEvent` enum (4 events)
-- [x] IMPLEMENT `HookDecision` sealed interface + 4 record variants + static factory methods
-- [x] IMPLEMENT `ToolCallRecord` record
-- [x] IMPLEMENT `HookContext` (ConcurrentHashMap state, CopyOnWriteArrayList history, thread-safe)
-- [x] IMPLEMENT `HookInput` sealed interface + 4 record variants (BeforeToolCall, AfterToolCall, SessionStart, SessionEnd — all include hookContext)
-- [x] IMPLEMENT `AgentHook` @FunctionalInterface
-- [x] IMPLEMENT `AgentHookProvider` interface
-- [x] WRITE unit tests: `HookDecisionTest` (factory methods, sealed exhaustiveness), `HookContextTest` (get/put, history immutability, recordToolCall)
-- [x] VERIFY: `./mvnw test -pl agent-hooks-core`
-- [x] COMMIT
-
-**Exit criteria**:
-- [x] All core types compile and tests pass
-- [x] `./mvnw test -pl agent-hooks-core` green
-- [x] Create: `plans/learnings/step-1.1-core-types.md`
-- [x] Update `CLAUDE.md` with distilled learnings
-- [x] Update `ROADMAP.md` checkboxes
-
-**Deliverables**: Core type system (7 files + 2 test files)
-
----
-
-### Step 1.2: Registry + Dispatch Engine
-
-**Entry criteria**:
-- [x] Step 1.1 complete
-- [x] Read: `plans/learnings/step-1.1-core-types.md`
-
-**Work items**:
-- [x] IMPLEMENT `AgentHookRegistry`:
-  - `on(event, hook)` and `on(event, priority, hook)` registration
-  - `onTool(pattern, event, hook)` pattern-based registration (regex)
-  - `register(provider)` provider registration
-  - `dispatch(event, input)` with priority ordering, Block short-circuit, Modify chaining
-  - Internal: `PrioritizedHook` record, `CopyOnWriteArrayList` per event
-- [x] WRITE `AgentHookRegistryTest`:
-  - Priority ordering (lower first)
-  - Block short-circuits remaining hooks
-  - Modify chains (subsequent hooks see modified input)
-  - Tool pattern matching (regex)
-  - Exception in hook treated as Proceed
-  - Retry on BEFORE_TOOL_CALL → IllegalStateException
-  - Provider registration delegates to provider
-- [x] VERIFY: `./mvnw test -pl agent-hooks-core`
-- [x] COMMIT
-
-**Exit criteria**:
-- [x] Registry dispatch logic fully tested
-- [x] `./mvnw test -pl agent-hooks-core` green
-- [x] Create: `plans/learnings/step-1.2-registry.md`
-- [x] Update `CLAUDE.md` with distilled learnings
-- [x] Update `ROADMAP.md` checkboxes
-
-**Deliverables**: Complete core module
-
----
-
-### Step 1.K: Stage 1 Consolidation
-
-**Entry criteria**:
-- [x] All Stage 1 steps complete
-- [x] Read: all `plans/learnings/step-1.*` files
-
-**Work items**:
-- [x] COMPACT learnings into `plans/learnings/LEARNINGS.md`
-- [x] UPDATE `CLAUDE.md` with distilled learnings from Stage 1
-- [x] COMMIT
-
-**Exit criteria**:
-- [x] `LEARNINGS.md` covers Stage 1
-- [x] Create: `plans/learnings/step-1.K-stage1-summary.md`
-- [x] Update `CLAUDE.md` with distilled learnings
-- [x] Update `ROADMAP.md` checkboxes
-- [x] COMMIT
-
----
-
-## Stage 2: Spring AI Adapter
-
-### Step 2.0: Stage 2 Entry — Review and Context Load
-
-**Entry criteria** *(inter-stage gate)*:
-- [x] Stage 1 consolidation complete — Read: `plans/learnings/step-1.K-stage1-summary.md`
-- [x] Read: `plans/learnings/LEARNINGS.md`
-- [x] Read: `plans/DESIGN.md` — Spring adapter components section
-
-**Work items**:
-- [x] REVIEW core API for any changes needed before building adapter
-- [x] READ Spring AI `ToolCallback`, `ToolCallbackProvider`, `DefaultToolCallingManager` source (`~/projects/spring-ai`)
-- [x] VERIFY: `MethodToolCallbackProvider` accessible from agent-hooks-spring (needed for `HookedTools.wrap()`)
-- [x] DOCUMENT integration approach
-
-**Exit criteria**:
-- [x] Core API verified stable for adapter use
-- [x] Create: `plans/learnings/step-2.0-stage2-entry.md`
-- [x] Update `ROADMAP.md` checkboxes
-- [x] COMMIT
-
----
-
-### Step 2.1: HookedToolCallback
-
-**Entry criteria**:
-- [x] Step 2.0 complete
-- [x] Read: `plans/learnings/step-2.0-stage2-entry.md`
-
-**Work items**:
-- [x] IMPLEMENT `HookedToolCallback` wrapping `ToolCallback`:
-  - Dispatches `BEFORE_TOOL_CALL` before delegate
-  - Handles Block (return reason as result, delegate never called), Modify (pass modified input)
-  - Dispatches `AFTER_TOOL_CALL` after execution (with result, duration, exception)
-  - Records tool call in `HookContext.history()`
-  - Delegates `getToolDefinition()` and `getToolMetadata()` to original
-- [x] WRITE `HookedToolCallbackTest` with mock ToolCallback (Mockito):
-  - Proceed passes through unchanged
-  - Block returns reason string, delegate never called
-  - Modify passes modified input to delegate
-  - AfterToolCall receives correct duration and result
-  - Exception in tool execution captured in AfterToolCall
-  - Tool call recorded in HookContext history
-- [x] VERIFY: `./mvnw test -pl agent-hooks-spring`
-- [x] COMMIT
-
-**Exit criteria**:
-- [x] HookedToolCallback fully functional
-- [x] `./mvnw test -pl agent-hooks-spring` green
-- [x] Create: `plans/learnings/step-2.1-hooked-tool-callback.md`
-- [x] Update `CLAUDE.md` with distilled learnings
-- [x] Update `ROADMAP.md` checkboxes
-
-**Deliverables**: Core Spring adapter component
-
----
-
-### Step 2.2: Provider, Utility, and Auto-Configuration
-
-**Entry criteria**:
-- [x] Step 2.1 complete
-- [x] Read: `plans/learnings/step-2.1-hooked-tool-callback.md`
-
-**Work items**:
-- [x] IMPLEMENT `HookedToolCallbackProvider` wrapping `ToolCallbackProvider`:
-  - Wraps each `ToolCallback` from delegate with `HookedToolCallback`
-  - Shares a single `AgentHookRegistry` + `HookContext`
-- [x] IMPLEMENT `HookedTools` static utility:
-  - `wrap(registry, hookContext, toolObjects...)` — creates `MethodToolCallbackProvider`, wraps it
-  - `wrap(registry, hookContext, ToolCallback...)` — wraps existing callbacks
-- [x] IMPLEMENT `AgentHooksAutoConfiguration`:
-  - `@AutoConfiguration @ConditionalOnClass(ToolCallback.class)`
-  - Creates `AgentHookRegistry` bean from all `AgentHookProvider` beans
-  - Creates default `HookContext` bean
-- [x] CREATE `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`
-- [x] WRITE `AgentHooksAutoConfigurationTest` (Spring context test):
-  - Registry created from providers
-  - HookContext bean created
-- [x] VERIFY: `./mvnw verify -pl agent-hooks-spring`
-- [x] COMMIT
-
-**Exit criteria**:
-- [x] Auto-configuration + utility wiring complete
-- [x] `./mvnw verify` green (both modules)
-- [x] Create: `plans/learnings/step-2.2-auto-config.md`
-- [x] Update `CLAUDE.md` with distilled learnings
-- [x] Update `ROADMAP.md` checkboxes
-
-**Deliverables**: Complete Spring adapter with auto-configuration + HookedTools utility
-
----
-
-### Step 2.K: Stage 2 Consolidation + Local Install
-
-**Entry criteria**:
-- [x] All Stage 2 steps complete
-- [x] Read: all `plans/learnings/step-2.*` files
-
-**Work items**:
-- [x] COMPACT learnings into `plans/learnings/LEARNINGS.md`
-- [x] UPDATE `CLAUDE.md` with full Stage 2 learnings
-- [x] RUN `./mvnw clean install` — install 0.1.0-SNAPSHOT to `~/.m2`
-- [x] VERIFY both artifacts in `~/.m2/repository/io/github/markpollack/`
-- [x] COMMIT
-
-**Exit criteria**:
-- [x] Library installed locally, ready for workshop consumption
-- [x] `LEARNINGS.md` covers Stages 1-2
-- [x] Create: `plans/learnings/step-2.K-stage2-summary.md`
-- [x] Update `CLAUDE.md` with distilled learnings
-- [x] Update `ROADMAP.md` checkboxes
-- [x] COMMIT
-
----
-
-## Stage 3: Workshop Integration
-
-### Step 3.0: Stage 3 Entry — Workshop Context Load
-
-**Entry criteria** *(inter-stage gate)*:
-- [ ] Stage 2 consolidation complete — Read: `plans/learnings/step-2.K-stage2-summary.md`
+- [ ] Read: `plans/DESIGN.md` — v0.2 type system
+- [ ] Read: `plans/review.md` — decision rationale
 - [ ] Read: `plans/learnings/LEARNINGS.md`
-- [ ] Read: `~/projects/art-of-building-agents/CLAUDE.md`
-- [ ] Read: `~/projects/art-of-building-agents/agents/03-guardrails/` source (handler pattern)
 
 **Work items**:
-- [ ] REVIEW workshop handler pattern (AgentHandler, Session, ChatClient builder)
-- [ ] REVIEW step 03 RestaurantTools (to copy)
-- [ ] IDENTIFY workshop pom.xml changes needed (agents/pom.xml module list)
-- [ ] DOCUMENT integration approach
+- [ ] REVIEW v0.2 design against current source code — identify all files that change
+- [ ] MAP the exact delta: which files are created, modified, deleted
+- [ ] VERIFY ArchUnit rules still make sense for new package structure
+- [ ] DOCUMENT the migration plan (file-by-file)
 
 **Exit criteria**:
-- [ ] Workshop patterns understood, integration approach documented
-- [ ] Create: `plans/learnings/step-3.0-workshop-entry.md`
+- [ ] Migration plan documented
+- [ ] Create: `plans/learnings/step-3.0-refactoring-entry.md`
 - [ ] Update `ROADMAP.md` checkboxes
 
 ---
 
-### Step 3.1: Workshop Module
+### Step 3.1: Core Event Types (replace enum + sealed interface)
 
 **Entry criteria**:
 - [ ] Step 3.0 complete
-- [ ] Read: `plans/learnings/step-3.0-workshop-entry.md`
-- [ ] agent-hooks-spring:0.1.0-SNAPSHOT installed in `~/.m2`
+- [ ] Read: `plans/learnings/step-3.0-refactoring-entry.md`
 
 **Work items**:
-- [ ] CREATE `agents/04-hooks/pom.xml` (deps: agent-core, spring-boot-starter-web, spring-ai-starter-model-openai, agent-hooks-spring:0.1.0-SNAPSHOT)
-- [ ] ADD `<module>04-hooks</module>` to `agents/pom.xml`
-- [ ] CREATE `HooksApplication.java` (@SpringBootApplication)
-- [ ] COPY `RestaurantTools.java` from step 03 (same 4 tools, new package)
-- [ ] CREATE `ExpensePolicyHookProvider.java` (steering hook: blocks bookTable when over budget)
-- [ ] CREATE `ToolCallLoggingHookProvider.java` (observation hook: counts/logs tool calls)
-- [ ] CREATE `HooksHandler.java` (AgentHandler impl using HookedTools.wrap(), hook activity table in state panel)
-- [ ] CREATE `application.yml`
-- [ ] VERIFY: `./mvnw compile -pl agents/04-hooks` (from workshop root)
-- [ ] COMMIT (in workshop repo)
+- [ ] CREATE `HookEvent` unsealed interface (`context(): HookContext`)
+- [ ] CREATE `ToolEvent` sub-interface (`toolName(): String`, `toolInput(): String`)
+- [ ] CONVERT `BeforeToolCall` from `HookInput` record → `ToolEvent` record
+- [ ] CONVERT `AfterToolCall` from `HookInput` record → `ToolEvent` record
+- [ ] CONVERT `SessionStart` from `HookInput` record → `HookEvent` record
+- [ ] CONVERT `SessionEnd` from `HookInput` record → `HookEvent` record
+- [ ] DELETE `AgentHookEvent` enum
+- [ ] DELETE `HookInput` sealed interface
+- [ ] UPDATE `AgentHook` — make generic: `<E extends HookEvent> HookDecision handle(E event)`
+- [ ] UPDATE `package-info.java` files for any package moves
+- [ ] UPDATE unit tests: `HookContextTest` (may reference old types)
+- [ ] WRITE new tests for `HookEvent`/`ToolEvent` interface contracts
+- [ ] VERIFY: `./mvnw compile -pl agent-hooks-core`
+- [ ] COMMIT
 
 **Exit criteria**:
-- [ ] Workshop step compiles against locally installed agent-hooks
-- [ ] `./mvnw compile -pl agents/04-hooks` green
-- [ ] Create: `plans/learnings/step-3.1-workshop-module.md` (in agent-hooks repo)
+- [ ] Core compiles with new event hierarchy
+- [ ] No references to `AgentHookEvent` or `HookInput` remain in core
+- [ ] Create: `plans/learnings/step-3.1-core-events.md`
+- [ ] Update `CLAUDE.md` with distilled learnings
 - [ ] Update `ROADMAP.md` checkboxes
-
-**Deliverables**: Workshop step demonstrating hooks with Inspector UI
 
 ---
 
-### Step 3.2: End-to-End Verification
+### Step 3.2: Registry Refactoring (type-based dispatch)
 
 **Entry criteria**:
 - [ ] Step 3.1 complete
-- [ ] Read: `plans/learnings/step-3.1-workshop-module.md`
-- [ ] OPENAI_API_KEY set
+- [ ] Read: `plans/learnings/step-3.1-core-events.md`
 
 **Work items**:
-- [ ] RUN `./mvnw spring-boot:run -pl agents/04-hooks`
-- [ ] TEST: send "Find a restaurant in Paral-lel for 4 people"
-- [ ] VERIFY: hook activity table appears in Inspector state panel
-- [ ] VERIFY: expense policy hook blocks over-budget bookings
-- [ ] VERIFY: tool call logging hook counts calls
-- [ ] FIX any issues found during manual testing
-- [ ] COMMIT (both repos if needed)
+- [ ] REFACTOR `AgentHookRegistry`:
+  - `on(Class<E>, AgentHook<E>)` — type-based registration
+  - `on(Class<E>, int priority, AgentHook<E>)` — with priority
+  - `onTool(String pattern, Class<E extends ToolEvent>, AgentHook<E>)` — type-safe tool pattern
+  - `dispatch(HookEvent)` — routes by `event.getClass()`, returns `HookDecision`
+  - Reverse priority order for "after" events (AfterToolCall)
+  - Runtime enforcement: Block/Modify/Retry on non-ToolEvent → log warning, treat as Proceed
+- [ ] UPDATE `AgentHookRegistryTest`:
+  - Type-based registration and dispatch
+  - Reverse ordering for AfterToolCall
+  - Runtime enforcement for non-tool decisions
+  - Tool pattern matching with ToolEvent type constraint
+  - All existing semantics (priority, Block short-circuit, Modify chaining, exception handling)
+- [ ] VERIFY: `./mvnw test -pl agent-hooks-core`
+- [ ] COMMIT
 
 **Exit criteria**:
-- [ ] End-to-end workshop demo functional
-- [ ] Hook activity visible in Inspector
-- [ ] Create: `plans/learnings/step-3.2-e2e-verification.md`
+- [ ] Registry fully functional with type-based dispatch
+- [ ] Reverse ordering for after events tested
+- [ ] Runtime enforcement for non-tool decisions tested
+- [ ] `./mvnw test -pl agent-hooks-core` green
+- [ ] Create: `plans/learnings/step-3.2-registry-refactoring.md`
+- [ ] Update `CLAUDE.md` with distilled learnings
 - [ ] Update `ROADMAP.md` checkboxes
 
 ---
 
-### Step 3.K: Stage 3 Consolidation
+### Step 3.3: Spring Adapter Update
+
+**Entry criteria**:
+- [ ] Step 3.2 complete
+- [ ] Read: `plans/learnings/step-3.2-registry-refactoring.md`
+
+**Work items**:
+- [ ] UPDATE `HookedToolCallback`:
+  - Construct `BeforeToolCall` / `AfterToolCall` event records instead of `HookInput` records
+  - Call `registry.dispatch(event)` instead of `registry.dispatch(enum, input)`
+- [ ] UPDATE `HookedToolCallbackProvider` (if needed)
+- [ ] UPDATE `HookedTools` (if needed)
+- [ ] UPDATE `AgentHooksAutoConfiguration` (if needed)
+- [ ] UPDATE all Spring module tests
+- [ ] UPDATE ArchUnit rules if package structure changed
+- [ ] VERIFY: `./mvnw test` (both modules)
+- [ ] VERIFY: JaCoCo coverage still passes (80% core, 70% spring)
+- [ ] COMMIT
+
+**Exit criteria**:
+- [ ] Spring adapter works with new event hierarchy
+- [ ] All 45+ tests green
+- [ ] Coverage thresholds met
+- [ ] Create: `plans/learnings/step-3.3-spring-adapter-update.md`
+- [ ] Update `CLAUDE.md` with distilled learnings
+- [ ] Update `ROADMAP.md` checkboxes
+
+---
+
+### Step 3.K: Stage 3 Consolidation + Local Install
 
 **Entry criteria**:
 - [ ] All Stage 3 steps complete
@@ -328,11 +184,15 @@ Pre-work: update VISION.md and DESIGN.md to reflect version alignment (Spring AI
 
 **Work items**:
 - [ ] COMPACT learnings into `plans/learnings/LEARNINGS.md`
-- [ ] UPDATE `CLAUDE.md` with full project learnings
+- [ ] UPDATE `CLAUDE.md` with v0.2 architecture summary
+- [ ] UPDATE Javadoc on all public types
+- [ ] RUN `./mvnw clean install` — install updated 0.1.0-SNAPSHOT to `~/.m2`
+- [ ] VERIFY both artifacts in `~/.m2/repository/io/github/markpollack/`
 - [ ] COMMIT
 
 **Exit criteria**:
-- [ ] `LEARNINGS.md` covers all stages
+- [ ] Library installed locally with v0.2 event hierarchy
+- [ ] `LEARNINGS.md` covers Stages 1-3
 - [ ] Create: `plans/learnings/step-3.K-stage3-summary.md`
 - [ ] Update `CLAUDE.md` with distilled learnings
 - [ ] Update `ROADMAP.md` checkboxes
@@ -340,21 +200,70 @@ Pre-work: update VISION.md and DESIGN.md to reflect version alignment (Spring AI
 
 ---
 
-## Plans Directory Structure
+## Stage 4: Workshop Integration (DEFERRED)
 
-```
-plans/
-├── ROADMAP.md
-├── DESIGN.md
-├── VISION.md
-├── inbox/
-├── prompts/
-└── learnings/
-    ├── LEARNINGS.md
-    ├── step-1.0-design-review.md
-    ├── step-1.1-core-types.md
-    └── ...
-```
+> Deferred until Mark completes workshop research. The steps below are placeholders.
+
+### Step 4.0: Workshop Context Load
+
+**Entry criteria**:
+- [ ] Stage 3 consolidation complete — Read: `plans/learnings/step-3.K-stage3-summary.md`
+- [ ] Read: `plans/learnings/LEARNINGS.md`
+- [ ] Read: `~/projects/art-of-building-agents/CLAUDE.md`
+- [ ] Read: `~/projects/art-of-building-agents/agents/03-guardrails/` source
+
+**Work items**:
+- [ ] REVIEW workshop handler pattern
+- [ ] IDENTIFY integration approach
+- [ ] DOCUMENT
+
+**Exit criteria**:
+- [ ] Create: `plans/learnings/step-4.0-workshop-entry.md`
+- [ ] Update `ROADMAP.md` checkboxes
+
+---
+
+### Step 4.1: Workshop Module
+
+**Entry criteria**:
+- [ ] Step 4.0 complete
+- [ ] agent-hooks-spring:0.1.0-SNAPSHOT (v0.2) installed in `~/.m2`
+
+**Work items**:
+- [ ] CREATE workshop module with hook providers using v0.2 API
+- [ ] Hook providers register via `registry.on(BeforeToolCall.class, hook)` (v0.2 syntax)
+- [ ] VERIFY compilation
+
+**Exit criteria**:
+- [ ] Workshop compiles
+- [ ] Create: `plans/learnings/step-4.1-workshop-module.md`
+- [ ] Update `ROADMAP.md` checkboxes
+
+---
+
+### Step 4.2: End-to-End Verification
+
+**Entry criteria**:
+- [ ] Step 4.1 complete
+- [ ] OPENAI_API_KEY set
+
+**Work items**:
+- [ ] RUN and test end-to-end
+- [ ] FIX issues
+- [ ] COMMIT
+
+**Exit criteria**:
+- [ ] End-to-end demo functional
+- [ ] Create: `plans/learnings/step-4.2-e2e.md`
+- [ ] Update `ROADMAP.md` checkboxes
+
+---
+
+### Step 4.K: Stage 4 Consolidation
+
+**Exit criteria**:
+- [ ] `LEARNINGS.md` covers all stages
+- [ ] COMMIT
 
 ---
 
@@ -366,24 +275,10 @@ plans/
 Step X.Y: Brief description of what was done
 ```
 
-### Step Entry Criteria Convention
+### Step Entry/Exit Criteria Convention
 
-Every step's entry criteria must include:
-```markdown
-- [ ] Previous step complete
-- [ ] Read: `plans/learnings/step-{{PREV}}-{{topic}}.md` — prior step learnings
-```
-
-### Step Exit Criteria Convention
-
-Every step's exit criteria must include:
-```markdown
-- [ ] All tests pass: `./mvnw test` (or `./mvnw verify` if integration tests)
-- [ ] Create: `plans/learnings/step-X.Y-topic.md`
-- [ ] Update `CLAUDE.md` with distilled learnings
-- [ ] Update `ROADMAP.md` checkboxes
-- [ ] COMMIT
-```
+Every step's entry criteria must include reading prior step learnings.
+Every step's exit criteria must include: tests pass, learnings file, CLAUDE.md update, ROADMAP.md checkboxes, COMMIT.
 
 ---
 
@@ -392,3 +287,4 @@ Every step's exit criteria must include:
 | Timestamp | Change | Trigger |
 |-----------|--------|---------|
 | 2026-04-09T14:00-04:00 | Initial draft — converted from claude plan | /plan-to-roadmap |
+| 2026-04-09T19:00-04:00 | Added Stage 3 (event hierarchy refactoring), renumbered workshop to Stage 4. Collapsed completed stages to summaries. | review.md decision: Option B |
