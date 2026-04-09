@@ -9,6 +9,7 @@ import io.github.markpollack.hooks.decision.ToolCallRecord;
 import io.github.markpollack.hooks.event.AgentHookEvent;
 import io.github.markpollack.hooks.event.HookInput;
 import io.github.markpollack.hooks.registry.AgentHookRegistry;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
@@ -16,8 +17,14 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.ai.tool.metadata.ToolMetadata;
 
 /**
- * Wraps a {@link ToolCallback} with hook dispatch. Fires BEFORE_TOOL_CALL before
- * execution and AFTER_TOOL_CALL after execution.
+ * Wraps a {@link ToolCallback} with hook dispatch. Fires
+ * {@link AgentHookEvent#BEFORE_TOOL_CALL} before execution and
+ * {@link AgentHookEvent#AFTER_TOOL_CALL} after execution.
+ *
+ * <p>
+ * On {@link HookDecision.Block}: returns the block reason as the tool result and never
+ * calls the delegate. On {@link HookDecision.Modify}: passes the modified input to the
+ * delegate.
  */
 public class HookedToolCallback implements ToolCallback {
 
@@ -27,6 +34,12 @@ public class HookedToolCallback implements ToolCallback {
 
 	private final HookContext hookContext;
 
+	/**
+	 * Create a new HookedToolCallback.
+	 * @param delegate the original tool callback to wrap
+	 * @param registry the hook registry for dispatching events
+	 * @param hookContext the session state shared across hooks
+	 */
 	public HookedToolCallback(ToolCallback delegate, AgentHookRegistry registry, HookContext hookContext) {
 		this.delegate = delegate;
 		this.registry = registry;
@@ -49,7 +62,7 @@ public class HookedToolCallback implements ToolCallback {
 	}
 
 	@Override
-	public String call(String toolInput, ToolContext toolContext) {
+	public String call(String toolInput, @Nullable ToolContext toolContext) {
 		String toolName = getToolDefinition().name();
 		String effectiveInput = toolInput;
 
@@ -58,8 +71,8 @@ public class HookedToolCallback implements ToolCallback {
 		HookDecision beforeDecision = registry.dispatch(AgentHookEvent.BEFORE_TOOL_CALL, beforeInput);
 
 		if (beforeDecision instanceof HookDecision.Block block) {
-			hookContext.recordToolCall(
-					new ToolCallRecord(toolName, toolInput, block.reason(), Duration.ZERO, beforeDecision, Instant.now()));
+			hookContext.recordToolCall(new ToolCallRecord(toolName, toolInput, block.reason(), Duration.ZERO,
+					beforeDecision, Instant.now()));
 			return block.reason();
 		}
 

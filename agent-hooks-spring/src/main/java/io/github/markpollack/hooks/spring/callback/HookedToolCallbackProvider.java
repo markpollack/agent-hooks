@@ -11,6 +11,10 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 /**
  * Wraps a {@link ToolCallbackProvider} so that every {@link ToolCallback} it produces is
  * wrapped with {@link HookedToolCallback}.
+ *
+ * <p>
+ * All wrapped callbacks share the same {@link AgentHookRegistry} and
+ * {@link HookContext}.
  */
 public class HookedToolCallbackProvider implements ToolCallbackProvider {
 
@@ -20,6 +24,12 @@ public class HookedToolCallbackProvider implements ToolCallbackProvider {
 
 	private final HookContext hookContext;
 
+	/**
+	 * Create a new HookedToolCallbackProvider.
+	 * @param delegate the original provider to wrap
+	 * @param registry the hook registry for dispatching events
+	 * @param hookContext the session state shared across hooks
+	 */
 	public HookedToolCallbackProvider(ToolCallbackProvider delegate, AgentHookRegistry registry,
 			HookContext hookContext) {
 		this.delegate = delegate;
