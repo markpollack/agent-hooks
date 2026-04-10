@@ -2,9 +2,12 @@ package io.github.markpollack.hooks.claude.bridge;
 
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.markpollack.hooks.decision.HookContext;
 import io.github.markpollack.hooks.decision.HookDecision;
 import io.github.markpollack.hooks.event.BeforeToolCall;
+import io.github.markpollack.hooks.gemini.dispatcher.GeminiHookDispatcher;
 import io.github.markpollack.hooks.registry.AgentHookRegistry;
 import io.github.markpollack.hooks.spi.AgentHookProvider;
 import io.github.markpollack.hooks.spring.callback.HookedToolCallback;
@@ -25,11 +28,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Cross-adapter proof: one {@link AgentHookProvider} works on both the Claude SDK
- * path and the Spring AI path. This is the core value proposition — write once,
- * run on any adapter.
+ * Cross-adapter proof: one {@link AgentHookProvider} works on the Claude SDK path,
+ * the Spring AI path, and the Gemini CLI path. This is the core value proposition
+ * — write once, run on any adapter.
  */
 class CrossAdapterProviderTest {
+
+	private final ObjectMapper objectMapper = new ObjectMapper();
 
 	/**
 	 * A provider that blocks the "Bash" tool — portable across adapters.
@@ -117,6 +122,33 @@ class CrossAdapterProviderTest {
 		String result = hooked.call("{\"path\":\"/tmp/file.txt\"}", null);
 
 		assertThat(result).isEqualTo("file contents");
+	}
+
+	@Test
+	void providerShouldBlockBashViaGemini() throws Exception {
+		GeminiHookDispatcher dispatcher = GeminiHookDispatcher.create(bashBlocker);
+
+		String input = """
+				{"hook_event_name":"BeforeTool","session_id":"s1","tool_name":"Bash",\
+				"tool_input":{"command":"rm -rf /"},"cwd":"/tmp","transcript_path":"","timestamp":""}""";
+
+		JsonNode result = objectMapper.readTree(dispatcher.dispatch(input));
+
+		assertThat(result.get("decision").asText()).isEqualTo("block");
+		assertThat(result.get("reason").asText()).isEqualTo("Bash is not allowed");
+	}
+
+	@Test
+	void providerShouldAllowReadViaGemini() throws Exception {
+		GeminiHookDispatcher dispatcher = GeminiHookDispatcher.create(bashBlocker);
+
+		String input = """
+				{"hook_event_name":"BeforeTool","session_id":"s1","tool_name":"Read",\
+				"tool_input":{"path":"/tmp/file.txt"},"cwd":"/tmp","transcript_path":"","timestamp":""}""";
+
+		JsonNode result = objectMapper.readTree(dispatcher.dispatch(input));
+
+		assertThat(result.get("decision").asText()).isEqualTo("allow");
 	}
 
 }
