@@ -37,6 +37,7 @@
         <module>agent-hooks-core</module>
         <module>agent-hooks-spring</module>
         <module>agent-hooks-claude</module>
+        <module>agent-hooks-gemini</module>
     </modules>
 
     <properties>
