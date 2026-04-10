@@ -5,9 +5,9 @@ package io.github.markpollack.hooks.decision;
  *
  * <p>
  * {@link Block} and {@link Modify} are only valid for
- * {@link io.github.markpollack.hooks.event.AgentHookEvent#BEFORE_TOOL_CALL BEFORE_TOOL_CALL};
+ * {@link io.github.markpollack.hooks.event.BeforeToolCall BeforeToolCall};
  * {@link Retry} is only valid for
- * {@link io.github.markpollack.hooks.event.AgentHookEvent#AFTER_TOOL_CALL AFTER_TOOL_CALL}.
+ * {@link io.github.markpollack.hooks.event.AfterToolCall AfterToolCall}.
  * {@link Proceed} is valid for all events.
  */
 public sealed interface HookDecision permits HookDecision.Proceed, HookDecision.Block, HookDecision.Modify,
