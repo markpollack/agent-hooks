@@ -6,7 +6,7 @@
 
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-parent</artifactId>
-    <version>0.6.2</version>
+    <version>0.6.3-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>agent-hooks</name>
