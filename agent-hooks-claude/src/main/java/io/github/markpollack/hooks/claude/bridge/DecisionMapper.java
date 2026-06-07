@@ -7,8 +7,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.markpollack.hooks.decision.HookDecision;
-import org.springaicommunity.claude.agent.sdk.types.control.HookOutput;
-import org.springaicommunity.claude.agent.sdk.types.control.HookOutput.HookSpecificOutput;
+import io.github.markpollack.claude.agent.sdk.types.control.HookOutput;
+import io.github.markpollack.claude.agent.sdk.types.control.HookOutput.HookSpecificOutput;
 
 /**
  * Maps {@link HookDecision} to Claude SDK {@link HookOutput}. Package-private — used

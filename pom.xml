@@ -6,7 +6,7 @@
 
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-parent</artifactId>
-    <version>0.6.3-SNAPSHOT</version>
+    <version>0.6.3</version>
     <packaging>pom</packaging>
 
     <name>agent-hooks</name>
@@ -54,7 +54,8 @@
         <mockito.version>5.15.2</mockito.version>
         <archunit.version>1.4.1</archunit.version>
         <jspecify.version>1.0.0</jspecify.version>
-        <claude-code-sdk.version>1.0.0</claude-code-sdk.version>
+        <jackson.version>2.21.2</jackson.version>
+        <claude-code-sdk.version>1.2.0</claude-code-sdk.version>
 
         <!-- Plugin versions -->
         <owasp-dependency-check.version>12.1.0</owasp-dependency-check.version>
@@ -65,6 +66,15 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Jackson BOM (imported first so it wins over the Spring BOMs) -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
             <!-- Internal -->
             <dependency>
                 <groupId>io.github.markpollack</groupId>
@@ -118,7 +128,7 @@
 
             <!-- Claude Agent SDK -->
             <dependency>
-                <groupId>org.springaicommunity</groupId>
+                <groupId>io.github.markpollack</groupId>
                 <artifactId>claude-code-sdk</artifactId>
                 <version>${claude-code-sdk.version}</version>
             </dependency>

@@ -18,11 +18,11 @@ import io.github.markpollack.hooks.event.AfterToolCall;
 import io.github.markpollack.hooks.event.BeforeToolCall;
 import io.github.markpollack.hooks.registry.AgentHookRegistry;
 import org.jspecify.annotations.Nullable;
-import org.springaicommunity.claude.agent.sdk.hooks.HookCallback;
-import org.springaicommunity.claude.agent.sdk.hooks.HookRegistry;
-import org.springaicommunity.claude.agent.sdk.types.control.HookEvent;
-import org.springaicommunity.claude.agent.sdk.types.control.HookInput;
-import org.springaicommunity.claude.agent.sdk.types.control.HookOutput;
+import io.github.markpollack.claude.agent.sdk.hooks.HookCallback;
+import io.github.markpollack.claude.agent.sdk.hooks.HookRegistry;
+import io.github.markpollack.claude.agent.sdk.types.control.HookEvent;
+import io.github.markpollack.claude.agent.sdk.types.control.HookInput;
+import io.github.markpollack.claude.agent.sdk.types.control.HookOutput;
 
 /**
  * Bridges the Claude Agent SDK hook system to the agent-hooks core registry.

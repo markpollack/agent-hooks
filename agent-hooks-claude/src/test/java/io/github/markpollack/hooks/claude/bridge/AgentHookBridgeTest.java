@@ -14,9 +14,9 @@ import io.github.markpollack.hooks.event.BeforeToolCall;
 import io.github.markpollack.hooks.registry.AgentHookRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springaicommunity.claude.agent.sdk.hooks.HookRegistry;
-import org.springaicommunity.claude.agent.sdk.types.control.HookInput;
-import org.springaicommunity.claude.agent.sdk.types.control.HookOutput;
+import io.github.markpollack.claude.agent.sdk.hooks.HookRegistry;
+import io.github.markpollack.claude.agent.sdk.types.control.HookInput;
+import io.github.markpollack.claude.agent.sdk.types.control.HookOutput;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -252,7 +252,7 @@ class AgentHookBridgeTest {
 	private HookOutput executeCallback(HookInput input) {
 		// Look up the registered callback and execute it directly
 		var registrations = claudeRegistry
-			.getByEvent(org.springaicommunity.claude.agent.sdk.types.control.HookEvent.fromProtocolName(input.hookEventName()));
+			.getByEvent(io.github.markpollack.claude.agent.sdk.types.control.HookEvent.fromProtocolName(input.hookEventName()));
 		assertThat(registrations).isNotEmpty();
 		return registrations.get(registrations.size() - 1).callback().handle(input);
 	}

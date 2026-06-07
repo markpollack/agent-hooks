@@ -12,9 +12,9 @@ import io.github.markpollack.hooks.registry.AgentHookRegistry;
 import io.github.markpollack.hooks.spi.AgentHookProvider;
 import io.github.markpollack.hooks.spring.callback.HookedToolCallback;
 import org.junit.jupiter.api.Test;
-import org.springaicommunity.claude.agent.sdk.hooks.HookRegistry;
-import org.springaicommunity.claude.agent.sdk.types.control.HookInput;
-import org.springaicommunity.claude.agent.sdk.types.control.HookOutput;
+import io.github.markpollack.claude.agent.sdk.hooks.HookRegistry;
+import io.github.markpollack.claude.agent.sdk.types.control.HookInput;
+import io.github.markpollack.claude.agent.sdk.types.control.HookOutput;
 
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.ToolDefinition;
@@ -60,7 +60,7 @@ class CrossAdapterProviderTest {
 				"tool-1", Map.of("command", "rm -rf /"));
 
 		var registrations = claudeRegistry
-			.getByEvent(org.springaicommunity.claude.agent.sdk.types.control.HookEvent.PRE_TOOL_USE);
+			.getByEvent(io.github.markpollack.claude.agent.sdk.types.control.HookEvent.PRE_TOOL_USE);
 		HookOutput output = registrations.get(registrations.size() - 1).callback().handle(input);
 
 		assertThat(output.continueExecution()).isFalse();
@@ -99,7 +99,7 @@ class CrossAdapterProviderTest {
 				"tool-2", Map.of("path", "/tmp/file.txt"));
 
 		var registrations = claudeRegistry
-			.getByEvent(org.springaicommunity.claude.agent.sdk.types.control.HookEvent.PRE_TOOL_USE);
+			.getByEvent(io.github.markpollack.claude.agent.sdk.types.control.HookEvent.PRE_TOOL_USE);
 		HookOutput output = registrations.get(registrations.size() - 1).callback().handle(input);
 
 		assertThat(output.continueExecution()).isTrue();
