@@ -58,7 +58,6 @@
         <claude-code-sdk.version>1.2.0</claude-code-sdk.version>
 
         <!-- Plugin versions -->
-        <owasp-dependency-check.version>12.1.0</owasp-dependency-check.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
         <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
@@ -186,15 +185,6 @@
                             </goals>
                         </execution>
                     </executions>
-                </plugin>
-                <plugin>
-                    <groupId>org.owasp</groupId>
-                    <artifactId>dependency-check-maven</artifactId>
-                    <version>${owasp-dependency-check.version}</version>
-                    <configuration>
-                        <failBuildOnCVSS>7.0</failBuildOnCVSS>
-                        <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
-                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
