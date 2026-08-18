@@ -15,6 +15,17 @@ import org.springframework.context.annotation.Bean;
 /**
  * Auto-configuration for agent-hooks. Creates an {@link AgentHookRegistry} from all
  * {@link AgentHookProvider} beans and a default {@link HookContext}.
+ *
+ * <p>
+ * <strong>The default {@link HookContext} bean is an application-wide singleton.</strong>
+ * Every hooked tool call in the application then shares one state map and one tool-call
+ * history. That is what a single-user CLI or desktop application wants. It is not what a
+ * multi-user server wants: one user's tool arguments and results become visible to hooks
+ * running for another user, and the history grows for the lifetime of the application
+ * context. A server should define its own request- or session-scoped {@code HookContext}
+ * bean — {@link ConditionalOnMissingBean} means yours replaces this one — or construct the
+ * context per conversation and wrap tools with
+ * {@link io.github.markpollack.hooks.spring.callback.HookedTools#wrap} at that point.
  */
 @AutoConfiguration
 @ConditionalOnClass(ToolCallback.class)

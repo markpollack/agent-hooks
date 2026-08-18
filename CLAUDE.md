@@ -4,14 +4,17 @@
 
 **agent-hooks** is a portable hook API for steering agent behavior at the tool-call boundary. Write your hook once, and it works across any agent runtime that has an adapter.
 
-- **agent-hooks-core**: Pure Java 17 API — events, inputs, decisions, registry. Zero dependencies.
+- **agent-hooks-core**: Pure Java 17 API — events, inputs, decisions, registry. No framework dependency; its only compile dependency is the `org.jspecify` nullness annotations.
 - **agent-hooks-spring**: Spring AI adapter — wraps `ToolCallback` with hook dispatch, auto-configures via Spring Boot.
 - **agent-hooks-claude**: Claude Agent SDK adapter — bridges `AgentHookProvider` implementations to Claude CLI hooks via `AgentHookBridge`.
 - **agent-hooks-gemini**: Gemini CLI adapter — stateless stdin/stdout dispatcher, maps Gemini JSON protocol to core events.
 
-**Group ID**: `io.github.markpollack` (candidate for `org.springaicommunity` once validated)
+**Group ID**: `io.github.markpollack` — the published, settled coordinate for every module. There is no pending move to `org.springaicommunity`.
 
 ## Build Commands
+
+Build from the reactor root. Vulnerability scanning is not run in GitHub Actions; use
+`scripts/security-scan.sh` against a validated, frozen offline database.
 
 ```bash
 # Build all modules
@@ -93,30 +96,49 @@ agent-hooks-gemini (Gemini CLI adapter — stateless)
 
 ## Key Design Decisions
 
-1. **Core has zero dependencies** — portable across Spring AI, Claude SDK, any Java agent runtime
+1. **Core carries no framework dependency** — portable across Spring AI, Claude SDK, any Java agent
+   runtime. `org.jspecify:jspecify` (annotations only) is its single compile dependency; logging uses
+   `java.util.logging` from the JDK rather than adding SLF4J.
 2. **Open event hierarchy** (v0.2) — `HookEvent` is unsealed, event IS the input (no parallel hierarchies)
 3. **Generic `AgentHook<E>`** — type-safe registration: `registry.on(BeforeToolCall.class, event -> ...)`
-4. **Block short-circuits** — security hooks can't be overridden by later hooks
+4. **Block short-circuits** — security hooks can't be overridden by later hooks. A hook that
+   *throws*, however, degrades to Proceed (logged at WARNING) — it does not fail closed.
 5. **Modify chains** — subsequent hooks see modified input
 6. **Reverse priority for AfterToolCall** — cleanup ordering (highest priority last)
-7. **Runtime enforcement** — Block/Modify/Retry on non-ToolEvent → treated as Proceed
+7. **Runtime enforcement** — Block/Modify/Retry on non-ToolEvent → logged at WARNING and treated as
+   Proceed. `Retry` from a `BeforeToolCall` hook throws `IllegalStateException` out of `dispatch`;
+   adapters that must not fail the agent are responsible for containing it (the Gemini dispatcher
+   does). Dispatch matches the event's **exact runtime class** — a hook registered on a supertype
+   such as `ToolEvent.class` compiles but never fires.
 8. **HookContext** (not ToolContext) for session state — ToolContext is immutable in Spring AI
 9. **Model-call events** deferred to Spring adapter only — not portable across CLIs
 
 ## Integration Context
 
-| Project | Relationship |
-|---------|-------------|
-| Spring AI | Wraps ToolCallback — no core changes needed |
-| claude-agent-sdk-java | Claude SDK provides hook types; agent-hooks-claude bridges to our registry |
-| agent-journal | Bridge: hook provider that logs events to a journal Run |
-| agent-harness | ChatClientStep gets hooks for free via Spring auto-config |
+No published AgentWorks artifact depends on agent-hooks today; the AgentWorks BOM manages the four
+modules but nothing consumes them. Verified against every artifact the BOM manages. Keep the
+distinction below between shipped adapters and intended integrations.
+
+| Project | Relationship | Status |
+|---------|-------------|--------|
+| Spring AI | Wraps ToolCallback — no core changes needed | shipped (`agent-hooks-spring`) |
+| claude-agent-sdk-java | Claude SDK provides hook types; agent-hooks-claude bridges to our registry | shipped (`agent-hooks-claude`) |
+| Gemini CLI | Stateless stdin/stdout dispatcher | shipped (`agent-hooks-gemini`) |
+| agent-journal | Bridge: hook provider that logs events to a journal Run | **intended; not built** |
+| agent-harness | ChatClientStep gets hooks for free via Spring auto-config | **intended; not built** |
 
 ## Version Alignment
 
-- **Spring AI**: 2.0.0-M3 (aligned with workshop `art-of-building-agents`)
-- **Spring Boot**: 4.1.0-M2
-- **License**: BSL 1.1 (Change Date: 2029-04-01 → Apache 2.0)
+- **Spring AI**: 2.0.0 GA
+- **Spring Boot**: 4.0.7
+- **Claude Agent SDK**: `claude-code-sdk` 1.4.0, `provided` scope — matches the AgentWorks BOM pin
+- **Jackson**: 2.21.6 (`com.fasterxml`) and 3.1.6 (`tools.jackson`), the AgentWorks suite floors
+- **Java**: 17 (`maven.compiler.release`), verified as class-file major version 61
+- **Latest release**: 0.6.4. `0.7.0-SNAPSHOT` is unreleased development.
+- **License**: BSL 1.1 (Change Date: 2029-04-01 → Apache 2.0). BSL from the first commit — this
+  project never shipped under Apache 2.0, so there is no historical Apache boundary to preserve.
+- **Resolution**: Maven Central only. The parent declares no `<repositories>`; a published POM must
+  never hand a consumer extra milestone or snapshot repositories.
 
 ## Quality Standards
 
@@ -145,7 +167,9 @@ agent-hooks-gemini (Gemini CLI adapter — stateless)
 - `HookedToolCallback`: wraps ToolCallback with BEFORE/AFTER dispatch. Block returns reason as result. Modify passes modified input.
 - `HookedToolCallbackProvider`: wraps ToolCallbackProvider — each callback becomes HookedToolCallback
 - `HookedTools.wrap(registry, hookContext, toolObjects...)`: main entry point for workshop usage
-- `AgentHooksAutoConfiguration`: creates registry from AgentHookProvider beans + default HookContext
+- `AgentHooksAutoConfiguration`: creates registry from AgentHookProvider beans + default HookContext.
+  That default HookContext is an **application-wide singleton** — correct for a single-user CLI,
+  wrong for a multi-user server, where you supply your own request/session-scoped bean
 - Build from reactor root (`./mvnw test`), not `-pl agent-hooks-spring` alone
 
 ## Claude Adapter Summary
@@ -154,10 +178,12 @@ agent-hooks-gemini (Gemini CLI adapter — stateless)
 - `DecisionMapper`: Proceed→allow, Block→block+deny, Modify→allow+modifyMap, Retry→warn+allow
 - 4 Claude-specific events: `UserPromptSubmit`, `AgentStop`, `SubagentStop`, `PreCompact` — all observation-only
 - Duration tracking: `ConcurrentHashMap<toolUseId, Instant>` — pre-hook captures start, post-hook computes delta
-- Session isolation: `ConcurrentHashMap<sessionId, HookContext>` — one HookContext per Claude session
+- Session isolation: `ConcurrentHashMap<sessionId, HookContext>` — one HookContext per Claude session.
+  Nothing evicts it automatically; `evictSession(String)` / `activeSessionCount()` exist for a
+  long-lived bridge shared across sessions.
 - Claude SDK dependency is `provided` scope — users bring `claude-code-sdk` at runtime
 - Cross-adapter proof: same `AgentHookProvider` works on Claude, Spring, and Gemini paths
-- 102 tests total (30 core + 19 spring + 25 claude + 28 gemini)
+- 105 tests total (30 core + 19 spring + 26 claude + 30 gemini)
 
 ## Gemini Adapter Summary
 
@@ -168,7 +194,10 @@ agent-hooks-gemini (Gemini CLI adapter — stateless)
 - Stateless: `HookContext` is fresh per invocation (Gemini spawns a new process per hook event)
 - Jackson `compile` scope (no SDK provides it — raw JSON protocol)
 - All logging to stderr (stdout reserved for JSON response)
-- Malformed JSON → `{}` to stdout, error to stderr (never blocks the agent)
+- Every invocation writes exactly one JSON object to stdout. Malformed JSON, a missing/unknown
+  `hook_event_name`, and any unchecked failure in a hook or the registry all yield `{}` on stdout
+  plus a stderr diagnostic — a broken hook degrades to "no opinion" instead of wedging the agent
+- Warning/exception messages never embed tool-input payloads (they routinely carry credentials)
 
 ## Session Behavior
 

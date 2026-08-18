@@ -36,11 +36,15 @@ final class GeminiDecisionMapper {
 			node.put("reason", block.reason());
 		}
 		else if (decision instanceof HookDecision.Modify modify) {
-			LOG.warning("Modify decision not supported by Gemini CLI, treating as allow: " + modify.modifiedInput());
+			// The payload is deliberately not logged: a modified tool input routinely carries
+			// arguments, file contents, and credentials, and this warning lands in whatever
+			// stderr sink the CLI is attached to.
+			LOG.warning("Modify decision not supported by Gemini CLI BeforeTool, treating as allow ("
+					+ modify.modifiedInput().length() + "-character payload discarded)");
 			node.put("decision", "allow");
 		}
-		else if (decision instanceof HookDecision.Retry retry) {
-			LOG.warning("Retry decision not supported by Gemini CLI, treating as allow: " + retry.reason());
+		else if (decision instanceof HookDecision.Retry) {
+			LOG.warning("Retry decision not supported by Gemini CLI, treating as allow");
 			node.put("decision", "allow");
 		}
 		else {

@@ -41,9 +41,20 @@ import io.github.markpollack.claude.agent.sdk.types.control.HookOutput;
  * meaningful numbers for cost/time guards on both adapters.
  *
  * <p>
- * Note: {@code toolStartTimes} entries leak if a pre-hook fires but the post-hook
- * never does (agent crash, timeout). Each entry is ~100 bytes, bounded by session
- * lifetime.
+ * <strong>Retained state.</strong> The bridge holds two maps for the lifetime of the
+ * bridge instance, and neither is evicted automatically:
+ * <ul>
+ * <li>one {@link HookContext} per Claude session id, so hooks in different sessions never
+ * observe each other's state or tool-call history; and</li>
+ * <li>one pre-hook start {@link Instant} per {@code toolUseId}, removed by the matching
+ * post-hook. Entries leak when a pre-hook fires but the post-hook never does (agent crash,
+ * timeout).</li>
+ * </ul>
+ * A {@code HookContext} also accumulates one {@link ToolCallRecord} per tool call, without
+ * a cap. For the ordinary case — one bridge per CLI process — both maps are bounded by the
+ * process lifetime. A long-lived bridge shared across many sessions (a server embedding the
+ * SDK) must call {@link #evictSession(String)} when a session is finished; see
+ * {@link #activeSessionCount()} to monitor it.
  */
 public class AgentHookBridge {
 
@@ -102,6 +113,27 @@ public class AgentHookBridge {
 	 */
 	public HookContext contextForSession(String sessionId) {
 		return sessions.computeIfAbsent(sessionId, k -> new HookContext());
+	}
+
+	/**
+	 * Discard the retained {@link HookContext} for a finished session, along with any
+	 * unmatched tool-call start times it left behind. Callers that keep one bridge alive
+	 * across many sessions must call this; a later event for the same session id simply
+	 * starts a fresh context.
+	 * @param sessionId the Claude session identifier
+	 * @return true if a context was retained for that session
+	 */
+	public boolean evictSession(String sessionId) {
+		return sessions.remove(sessionId) != null;
+	}
+
+	/**
+	 * The number of sessions whose {@link HookContext} is currently retained. Intended for
+	 * diagnostics and leak detection in long-lived embeddings.
+	 * @return the retained session count
+	 */
+	public int activeSessionCount() {
+		return sessions.size();
 	}
 
 	private HookCallback preToolUseCallback() {

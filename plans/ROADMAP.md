@@ -107,7 +107,7 @@ Stage 3 refactors the core API from a closed enum+sealed-interface dual hierarch
 
 ## Stage 5: Workshop Integration (COMPLETE)
 
-> Module `agents/03b-hooks/` in `~/projects/art-of-building-agents/`.
+> Module `agents/03b-hooks/` in the (unpublished) `art-of-building-agents` workshop.
 
 **What was built**: Dedicated workshop step ("Step 03b: Hooks — Prompt Suggests, Hook Enforces") with three teaching hook providers:
 - `ToolCallLoggingProvider` — observation pattern (logs every tool call with timing)

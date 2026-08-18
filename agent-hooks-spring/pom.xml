@@ -27,6 +27,20 @@
             <artifactId>spring-ai-client-chat</artifactId>
         </dependency>
 
+        <!-- Jackson 3 floor for standalone consumers.
+             Spring AI 2.0's transitive graph (jsonschema-generator) selects tools.jackson
+             3.0.3/3.1.4 for a consumer that does not import a BOM. The parent's
+             dependencyManagement does not travel through the published flattened POM, so the
+             floor is declared here, at depth 1, where nearest-wins protects that consumer. -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <!-- Spring Boot Auto-Configuration -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

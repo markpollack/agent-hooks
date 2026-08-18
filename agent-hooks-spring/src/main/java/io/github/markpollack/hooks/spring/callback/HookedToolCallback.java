@@ -24,6 +24,17 @@ import org.springframework.ai.tool.metadata.ToolMetadata;
  * On {@link HookDecision.Block}: returns the block reason as the tool result and never
  * calls the delegate. On {@link HookDecision.Modify}: passes the modified input to the
  * delegate.
+ *
+ * <p>
+ * The {@link AfterToolCall} decision is observed, not acted on:
+ * {@link HookDecision.Retry} does not re-execute the tool, and a {@link HookDecision.Block}
+ * returned after the fact cannot un-run it. The delegate's exception, if any, is rethrown
+ * after the after-hooks have run and after the call is recorded in
+ * {@link HookContext#history()}.
+ *
+ * <p>
+ * The supplied {@link HookContext} is shared by every call made through this callback.
+ * Give each conversation its own context when hooks keep per-conversation state.
  */
 public class HookedToolCallback implements ToolCallback {
 

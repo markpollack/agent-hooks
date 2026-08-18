@@ -41,5 +41,6 @@ build/
 *.log
 
 ### Agent / internal ###
-CLAUDE.md
-plans/
+# CLAUDE.md and plans/ are deliberately tracked: CLAUDE.md is the repository's routing file
+# and the canonical documentation links to plans/DESIGN.md. They were listed here while an
+# earlier commit tried to untrack them, which left ignore rules contradicting the index.

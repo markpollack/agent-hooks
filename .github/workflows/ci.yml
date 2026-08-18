@@ -5,9 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
-    uses: markpollack/build-tools/.github/workflows/ci-build.yml@main
+    # Pinned to an immutable build-tools commit — a mutable @main reference would let an
+    # upstream edit change what this repository's required build executes.
+    uses: markpollack/build-tools/.github/workflows/ci-build.yml@35297f1ade5f47c2925d6dab42a7e2d43bd734d0
     with:
       java-version: '17'

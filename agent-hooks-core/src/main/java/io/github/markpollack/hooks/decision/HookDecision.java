@@ -32,7 +32,19 @@ public sealed interface HookDecision permits HookDecision.Proceed, HookDecision.
 	}
 
 	/**
-	 * Request the tool call be retried. Only valid for AFTER_TOOL_CALL.
+	 * Request the tool call be retried. Only valid for
+	 * {@link io.github.markpollack.hooks.event.AfterToolCall AfterToolCall}; returning it
+	 * from a {@link io.github.markpollack.hooks.event.BeforeToolCall BeforeToolCall} hook
+	 * throws {@link IllegalStateException}.
+	 *
+	 * <p>
+	 * <strong>Advisory in the shipped adapters.</strong> None of the Spring AI, Claude, or
+	 * Gemini adapters re-executes the tool: the Spring wrapper ignores the decision, and
+	 * the Claude and Gemini adapters log a warning and allow. The decision is carried by
+	 * the API and is returned by
+	 * {@link io.github.markpollack.hooks.registry.AgentHookRegistry#dispatch(io.github.markpollack.hooks.event.HookEvent)
+	 * dispatch}, so a caller driving its own tool loop can act on it, but re-execution is
+	 * not provided for you.
 	 * @param reason explanation for the retry
 	 */
 	record Retry(String reason) implements HookDecision {
@@ -60,7 +72,7 @@ public sealed interface HookDecision permits HookDecision.Proceed, HookDecision.
 	}
 
 	/**
-	 * Create a {@link Retry} decision.
+	 * Create a {@link Retry} decision. See {@link Retry} for its advisory status.
 	 * @param reason explanation for the retry
 	 */
 	static Retry retry(String reason) {

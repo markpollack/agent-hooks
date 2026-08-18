@@ -48,8 +48,8 @@ final class DecisionMapper {
 				.hookSpecificOutput(HookSpecificOutput.preToolUseModify(updatedInput))
 				.build();
 		}
-		if (decision instanceof HookDecision.Retry retry) {
-			LOG.warning("Retry decision has no Claude equivalent, treating as allow: " + retry.reason());
+		if (decision instanceof HookDecision.Retry) {
+			LOG.warning("Retry decision has no Claude equivalent, treating as allow");
 			return HookOutput.allow();
 		}
 		// Proceed (default)
@@ -74,7 +74,10 @@ final class DecisionMapper {
 			return objectMapper.readValue(json, MAP_TYPE);
 		}
 		catch (JsonProcessingException e) {
-			throw new IllegalArgumentException("Failed to parse modified input as JSON: " + json, e);
+			// The offending payload is a tool input and may carry credentials; keep it out of
+			// the exception message, which the Claude CLI surfaces in its own logs.
+			throw new IllegalArgumentException(
+					"Failed to parse modified input as JSON (" + json.length() + " characters)", e);
 		}
 	}
 

@@ -49,8 +49,11 @@ import org.jspecify.annotations.Nullable;
  * }</pre>
  *
  * <p><strong>Protocol:</strong> All logging goes to stderr (stdout is reserved
- * for the JSON response). Malformed stdin JSON produces {@code {}} on stdout
- * and an error on stderr — never blocks the agent due to hook parse failure.
+ * for the JSON response). Exactly one JSON object is written to stdout for every
+ * invocation. Malformed stdin JSON, an unknown event name, a missing
+ * {@code hook_event_name}, and any unchecked failure inside a hook or the registry all
+ * produce {@code {}} on stdout and a diagnostic on stderr, so a broken hook degrades to
+ * "no opinion" instead of wedging the agent.
  */
 public class GeminiHookDispatcher {
 
@@ -102,6 +105,7 @@ public class GeminiHookDispatcher {
 		}
 		String outputJson = dispatch(inputJson, err);
 		out.println(outputJson);
+		out.flush();
 	}
 
 	/**
@@ -114,6 +118,20 @@ public class GeminiHookDispatcher {
 	}
 
 	private String dispatch(String inputJson, PrintStream err) {
+		try {
+			return dispatchOrThrow(inputJson, err);
+		}
+		catch (RuntimeException | Error e) {
+			// The registry throws IllegalStateException for a decision the event cannot
+			// accept, and a hook can still fail in ways the registry does not catch. Gemini
+			// is waiting on stdout for this process; emit the neutral response rather than
+			// exiting with nothing written.
+			err.println("agent-hooks-gemini: hook dispatch failed: " + e);
+			return "{}";
+		}
+	}
+
+	private String dispatchOrThrow(String inputJson, PrintStream err) {
 		JsonNode root;
 		try {
 			root = objectMapper.readTree(inputJson);

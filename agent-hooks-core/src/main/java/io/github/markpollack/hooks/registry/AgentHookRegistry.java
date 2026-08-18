@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import io.github.markpollack.hooks.decision.HookDecision;
@@ -34,8 +36,29 @@ import org.jspecify.annotations.Nullable;
  * <p>
  * For non-tool events (session, custom): Block/Modify/Retry are logged as warnings and
  * treated as Proceed (observation-only).
+ *
+ * <p>
+ * <strong>Dispatch matches the event's exact runtime class.</strong> A hook registered
+ * against a supertype or interface — {@code on(ToolEvent.class, ...)},
+ * {@code on(HookEvent.class, ...)} — compiles but is never invoked. Register against the
+ * concrete event record you want to observe.
+ *
+ * <p>
+ * <strong>Failure model.</strong> An exception thrown by a hook is logged at
+ * {@code WARNING} and treated as Proceed; it never propagates to the agent runtime. A hook
+ * that returns a decision the event cannot accept is a programming error, not a runtime
+ * condition: returning {@code Retry} from a {@link BeforeToolCall} hook throws
+ * {@link IllegalStateException} out of {@link #dispatch(HookEvent)}. Adapters that must not
+ * fail the agent on a misconfigured hook are responsible for containing that exception.
  */
 public class AgentHookRegistry {
+
+	/**
+	 * {@code java.util.logging} keeps the core module free of third-party dependencies.
+	 * Its default handler writes to {@code System.err}, which the Gemini adapter relies on
+	 * to keep {@code System.out} reserved for the hook protocol response.
+	 */
+	private static final Logger LOG = Logger.getLogger(AgentHookRegistry.class.getName());
 
 	private static final int DEFAULT_PRIORITY = 100;
 
@@ -136,13 +159,21 @@ public class AgentHookRegistry {
 				decision = ((AgentHook<HookEvent>) ph.hook()).handle(currentEvent);
 			}
 			catch (Exception e) {
+				// A failing hook must not take the agent down, but it must not fail silently
+				// either: a security hook that throws otherwise degrades to Proceed unnoticed.
+				LOG.log(Level.WARNING, e,
+						() -> "Hook " + ph.hook().getClass().getName() + " threw handling "
+								+ event.getClass().getSimpleName() + "; treating as Proceed");
 				decision = HookDecision.proceed();
 			}
 
 			if (!isToolEvent) {
 				// Non-tool events: observation only
 				if (!(decision instanceof HookDecision.Proceed)) {
-					// Log warning — steering decisions ignored for non-tool events
+					HookDecision ignored = decision;
+					LOG.warning(() -> "Ignoring " + ignored.getClass().getSimpleName() + " from hook "
+							+ ph.hook().getClass().getName() + ": " + event.getClass().getSimpleName()
+							+ " is observation-only, treating as Proceed");
 					lastDecision = HookDecision.proceed();
 					continue;
 				}

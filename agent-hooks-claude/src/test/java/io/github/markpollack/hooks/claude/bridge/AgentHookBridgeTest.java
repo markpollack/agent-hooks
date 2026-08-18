@@ -170,6 +170,26 @@ class AgentHookBridgeTest {
 	}
 
 	@Test
+	void evictSessionShouldReleaseRetainedContext() {
+		executePreToolUse(preToolUseInput("Bash", "tool-a", Map.of(), "session-A"));
+		executePostToolUse(postToolUseInput("Bash", "tool-a", Map.of(), "ok", "session-A"));
+		executePreToolUse(preToolUseInput("Read", "tool-b", Map.of(), "session-B"));
+
+		assertThat(bridge.activeSessionCount()).isEqualTo(2);
+		HookContext beforeEviction = bridge.contextForSession("session-A");
+		assertThat(beforeEviction.history()).hasSize(1);
+
+		assertThat(bridge.evictSession("session-A")).isTrue();
+		assertThat(bridge.evictSession("session-A")).isFalse();
+		assertThat(bridge.activeSessionCount()).isEqualTo(1);
+
+		// A later event for the same id starts clean rather than resurrecting the history.
+		HookContext afterEviction = bridge.contextForSession("session-A");
+		assertThat(afterEviction).isNotSameAs(beforeEviction);
+		assertThat(afterEviction.history()).isEmpty();
+	}
+
+	@Test
 	void blockedToolShouldRecordInHistoryAndNotStartTimer() {
 		registry.on(BeforeToolCall.class, event -> HookDecision.block("denied"));
 

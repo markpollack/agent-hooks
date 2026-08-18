@@ -271,6 +271,44 @@ class GeminiHookDispatcherTest {
 		assertThat(output).isEqualTo("{}");
 	}
 
+	@Test
+	void failingHookShouldStillWriteAProtocolResponseToStdout() throws Exception {
+		// Returning Retry from a BeforeToolCall hook is a programming error: the registry
+		// throws IllegalStateException. Gemini is blocked on this process's stdout, so the
+		// dispatcher must still answer rather than exiting with nothing written.
+		AgentHookProvider misconfigured = registry -> registry.on(BeforeToolCall.class,
+				event -> HookDecision.retry("not valid before a tool call"));
+		GeminiHookDispatcher dispatcher = GeminiHookDispatcher.create(misconfigured);
+
+		ByteArrayInputStream stdin = new ByteArrayInputStream(
+				beforeToolJson("Bash", "{\"command\":\"ls\"}").getBytes(StandardCharsets.UTF_8));
+		ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+		ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+		dispatcher.run(stdin, new PrintStream(stdout), new PrintStream(stderr));
+
+		assertThat(stdout.toString(StandardCharsets.UTF_8).trim()).isEqualTo("{}");
+		assertThat(stderr.toString(StandardCharsets.UTF_8)).contains("hook dispatch failed");
+	}
+
+	@Test
+	void everyOutcomeShouldKeepStdoutToASingleJsonObject() throws Exception {
+		AgentHookProvider misconfigured = registry -> registry.on(BeforeToolCall.class,
+				event -> HookDecision.retry("boom"));
+
+		for (String input : new String[] { beforeToolJson("Bash", "{}"), "not json at all {{{",
+				"{\"session_id\":\"s1\"}", "{\"hook_event_name\":\"UnknownEvent\"}" }) {
+			GeminiHookDispatcher dispatcher = GeminiHookDispatcher.create(misconfigured);
+			ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+			dispatcher.run(new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)),
+					new PrintStream(stdout), new PrintStream(new ByteArrayOutputStream()));
+
+			String written = stdout.toString(StandardCharsets.UTF_8);
+			assertThat(written.trim().lines()).hasSize(1);
+			assertThat(objectMapper.readTree(written.trim()).isObject()).isTrue();
+		}
+	}
+
 	// --- Integration: run() with streams ---
 
 	@Test
