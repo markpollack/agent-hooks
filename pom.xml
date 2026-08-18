@@ -231,6 +231,12 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <!-- The release profile activates central-publishing-maven-plugin as an
+                         extension, which marks modules as skipping maven-deploy-plugin. CycloneDX's
+                         skipNotDeployed then defaults to skipping the SBOM, so `-Prelease` produced
+                         no SBOM at all while a plain `package` produced one. The release path is
+                         exactly where the SBOM has to exist. -->
+                    <skipNotDeployed>false</skipNotDeployed>
                     <projectType>library</projectType>
                     <schemaVersion>1.6</schemaVersion>
                     <outputFormat>json</outputFormat>
