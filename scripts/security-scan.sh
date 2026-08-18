@@ -13,6 +13,9 @@
 #   TRIVY_CACHE_DIR=/path/to/validated-trivy-cache scripts/security-scan.sh rootfs
 #   TRIVY_CACHE_DIR=/path/to/validated-trivy-cache scripts/security-scan.sh secrets
 #
+# Set MAVEN_REPO_LOCAL to use an isolated Maven repository; it must be the same one the
+# preceding `./mvnw clean install` used.
+#
 # Modes:
 #   sbom     scan the aggregate CycloneDX SBOM produced by `./mvnw clean package`
 #   rootfs   scan the actual resolved runtime JAR closure of every published module
@@ -27,6 +30,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MODE="${1:-sbom}"
 OUT="${OUT_DIR:-$ROOT/target/security}"
+MVN_ARGS=()
+[[ -n "${MAVEN_REPO_LOCAL:-}" ]] && MVN_ARGS+=("-Dmaven.repo.local=$MAVEN_REPO_LOCAL")
 
 if [[ -z "${TRIVY_CACHE_DIR:-}" ]]; then
 	echo "error: TRIVY_CACHE_DIR must point at a validated, frozen Trivy cache." >&2
@@ -42,8 +47,10 @@ command -v trivy >/dev/null || { echo "error: trivy is not on PATH" >&2; exit 2;
 mkdir -p "$OUT"
 
 trivy_offline() {
+	# --skip-version-check matters: without it Trivy makes a network call to look for a newer
+	# release, which defeats the point of an offline scan.
 	trivy --cache-dir "$TRIVY_CACHE_DIR" "$@" \
-		--skip-db-update --skip-java-db-update --offline-scan --disable-telemetry
+		--skip-db-update --skip-java-db-update --offline-scan --disable-telemetry --skip-version-check
 }
 
 case "$MODE" in
@@ -55,14 +62,21 @@ sbom)
 	;;
 rootfs)
 	# The SBOM is generated inventory; this scans the JARs a consumer actually resolves.
+	# Requires `./mvnw clean install` first: resolving one module's closure needs its reactor
+	# siblings present in the local repository.
+	for module in agent-hooks-core agent-hooks-spring agent-hooks-claude agent-hooks-gemini; do
+		compgen -G "$ROOT/$module/target/$module-*.jar" >/dev/null || {
+			echo "error: $module is not built — run ./mvnw clean install first" >&2; exit 2; }
+	done
 	CLOSURE="$OUT/runtime-closure"
 	rm -rf "$CLOSURE"
 	mkdir -p "$CLOSURE"
+	"$ROOT/mvnw" -q -B "${MVN_ARGS[@]}" dependency:copy-dependencies \
+		-DincludeScope=runtime -DoutputDirectory="$CLOSURE"
 	for module in agent-hooks-core agent-hooks-spring agent-hooks-claude agent-hooks-gemini; do
-		"$ROOT/mvnw" -q -B -pl "$module" dependency:copy-dependencies \
-			-DincludeScope=runtime -DoutputDirectory="$CLOSURE"
-		cp "$ROOT/$module/target/"*.jar "$CLOSURE/" 2>/dev/null || true
+		cp "$ROOT/$module/target/$module-"*.jar "$CLOSURE/" 2>/dev/null || true
 	done
+	rm -f "$CLOSURE"/*-sources.jar "$CLOSURE"/*-javadoc.jar
 	trivy_offline rootfs --scanners vuln --format json --output "$OUT/trivy-rootfs-vulnerabilities.json" "$CLOSURE"
 	trivy_offline rootfs --scanners vuln --format table "$CLOSURE"
 	;;

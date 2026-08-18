@@ -16,7 +16,9 @@ jobs:
     with:
       java-version: '21'
       version: ${{ inputs.version }}
-      # Curated notes, kept in the repository next to the source they describe.
+      # Curated notes, kept in the repository next to the source they describe. The upstream
+      # workflow requires this to be a tracked file, so add release-notes/<version>.md before
+      # dispatching a release — the run fails closed rather than publishing generated notes.
       release-notes-file: release-notes/${{ inputs.version }}.md
     secrets:
       MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
