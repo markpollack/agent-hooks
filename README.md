@@ -10,12 +10,15 @@ Gemini CLI adapters wire that core into each runtime's tool-call lifecycle.
 
 ## Modules
 
-| Artifact | Adapter for |
-|---|---|
-| `agent-hooks-core` | none — the portable API |
-| `agent-hooks-spring` | Spring AI `ToolCallback` |
-| `agent-hooks-claude` | Claude Agent SDK (`claude-code-sdk`, `provided` scope) |
-| `agent-hooks-gemini` | Gemini CLI stdin/stdout hook protocol |
+| Artifact | Adapter for | Requires |
+|---|---|---|
+| `agent-hooks-core` | none — the portable API | Java 17 |
+| `agent-hooks-spring` | Spring AI `ToolCallback` | Java 17 |
+| `agent-hooks-gemini` | Gemini CLI stdin/stdout hook protocol | Java 17 |
+| `agent-hooks-claude` | Claude Agent SDK (`claude-code-sdk`, `provided` scope) | **Java 21** |
+
+`agent-hooks-claude` needs Java 21 because every published `claude-code-sdk` version is
+Java 21 bytecode. If you are on Java 17, the other three modules are unaffected.
 
 ## Dependency
 
@@ -36,8 +39,15 @@ Add the adapter for your runtime alongside it. `agent-hooks-claude` expects you 
 ./mvnw clean verify
 ```
 
-Builds and tests the whole reactor from a clean checkout. Requires JDK 17 or later; all
-artifacts target Java 17 bytecode. Everything resolves from Maven Central.
+Builds and tests the whole reactor from a clean checkout. Building the full reactor requires
+**JDK 21**, because `agent-hooks-claude` compiles against a Java 21 SDK. The other three
+modules build and test on JDK 17 on their own:
+
+```bash
+./mvnw clean verify -pl agent-hooks-core,agent-hooks-spring,agent-hooks-gemini
+```
+
+Everything resolves from Maven Central.
 
 Dependency vulnerability scanning is deliberately not part of CI — see
 [`scripts/security-scan.sh`](scripts/security-scan.sh) for the offline scan against a

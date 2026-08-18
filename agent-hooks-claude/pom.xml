@@ -14,6 +14,17 @@
     <name>agent-hooks-claude</name>
     <description>Claude Agent SDK adapter for agent-hooks — bridges AgentHookProvider to Claude CLI hooks</description>
 
+    <properties>
+        <!-- Java 21, not the repository's Java 17 baseline. Every published claude-code-sdk
+             version (1.1.0 through 1.4.0) is compiled to class-file major version 65, so this
+             module cannot be compiled against it on JDK 17 and a Java 17 consumer could not
+             supply the SDK it requires anyway. agent-hooks-core, -spring, and -gemini remain
+             Java 17 and are unaffected. -->
+        <!-- The parent's compiler pluginManagement interpolates ${java.version}, so overriding
+             that property (not maven.compiler.release) is what actually takes effect here. -->
+        <java.version>21</java.version>
+    </properties>
+
     <dependencies>
         <!-- Internal -->
         <dependency>

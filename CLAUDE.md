@@ -133,7 +133,11 @@ distinction below between shipped adapters and intended integrations.
 - **Spring Boot**: 4.0.7
 - **Claude Agent SDK**: `claude-code-sdk` 1.4.0, `provided` scope — matches the AgentWorks BOM pin
 - **Jackson**: 2.21.6 (`com.fasterxml`) and 3.1.6 (`tools.jackson`), the AgentWorks suite floors
-- **Java**: 17 (`maven.compiler.release`), verified as class-file major version 61
+- **Java**: core, spring, gemini target **17** (class-file major 61) and are verified building and
+  testing on a real JDK 17. `agent-hooks-claude` targets **21** (major 65): every published
+  `claude-code-sdk` version, 1.1.0 through 1.4.0, is Java 21 bytecode, so that module cannot be
+  compiled on JDK 17 and a Java 17 consumer could not supply the SDK it requires. Building the
+  full reactor therefore needs JDK 21, and CI runs at 21.
 - **Latest release**: 0.6.4. `0.7.0-SNAPSHOT` is unreleased development.
 - **License**: BSL 1.1 (Change Date: 2029-04-01 → Apache 2.0). BSL from the first commit — this
   project never shipped under Apache 2.0, so there is no historical Apache boundary to preserve.
