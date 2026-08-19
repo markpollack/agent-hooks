@@ -55,7 +55,7 @@
         <jspecify.version>1.0.0</jspecify.version>
         <jackson.version>2.21.6</jackson.version>
         <jackson3.version>3.1.6</jackson3.version>
-        <claude-code-sdk.version>1.4.0</claude-code-sdk.version>
+        <claude-code-sdk.version>1.5.0</claude-code-sdk.version>
 
         <!-- Plugin versions -->
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>

@@ -16,7 +16,7 @@
 
     <properties>
         <!-- Java 21, not the repository's Java 17 baseline. Every published claude-code-sdk
-             version (1.1.0 through 1.4.0) is compiled to class-file major version 65, so this
+             version (1.1.0 through 1.5.0) is compiled to class-file major version 65, so this
              module cannot be compiled against it on JDK 17 and a Java 17 consumer could not
              supply the SDK it requires anyway. agent-hooks-core, -spring, and -gemini remain
              Java 17 and are unaffected. -->
