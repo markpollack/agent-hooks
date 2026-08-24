@@ -214,19 +214,17 @@
         </pluginManagement>
 
         <plugins>
-            <!-- One aggregate CycloneDX SBOM for the whole reactor, produced by the root
-                 project only (inherited=false keeps children from emitting duplicates). -->
+            <!-- One consumer-scoped CycloneDX attachment per artifact. -->
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
                 <version>${cyclonedx-maven-plugin.version}</version>
-                <inherited>false</inherited>
                 <executions>
                     <execution>
-                        <id>aggregate-bom</id>
-                        <phase>package</phase>
+                        <id>consumer-bom</id>
+                        <phase>verify</phase>
                         <goals>
-                            <goal>makeAggregateBom</goal>
+                            <goal>makeBom</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -240,10 +238,11 @@
                     <projectType>library</projectType>
                     <schemaVersion>1.6</schemaVersion>
                     <outputFormat>json</outputFormat>
-                    <outputName>agent-hooks-bom</outputName>
+                    <outputName>${project.artifactId}-${project.version}-cyclonedx</outputName>
+                    <classifier>cyclonedx</classifier>
                     <includeCompileScope>true</includeCompileScope>
                     <includeRuntimeScope>true</includeRuntimeScope>
-                    <includeProvidedScope>true</includeProvidedScope>
+                    <includeProvidedScope>false</includeProvidedScope>
                     <includeSystemScope>false</includeSystemScope>
                     <includeTestScope>false</includeTestScope>
                 </configuration>
