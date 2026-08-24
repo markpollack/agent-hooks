@@ -26,7 +26,7 @@ Java 21 bytecode. If you are on Java 17, the other three modules are unaffected.
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-core</artifactId>
-    <version>0.6.4</version>
+    <version>0.8.0</version>
 </dependency>
 ```
 
