@@ -52,7 +52,7 @@
         <assertj.version>3.27.7</assertj.version>
         <mockito.version>5.23.0</mockito.version>
         <archunit.version>1.5.0</archunit.version>
-        <jspecify.version>1.0.0</jspecify.version>
+        <jspecify.version>1.0.1</jspecify.version>
         <jackson.version>2.22.2</jackson.version>
         <jackson3.version>3.2.2</jackson3.version>
         <claude-code-sdk.version>1.5.0</claude-code-sdk.version>
