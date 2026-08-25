@@ -61,7 +61,6 @@
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
-        <cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
         <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
     </properties>
 
@@ -213,41 +212,6 @@
             </plugins>
         </pluginManagement>
 
-        <plugins>
-            <!-- One consumer-scoped CycloneDX attachment per artifact. -->
-            <plugin>
-                <groupId>org.cyclonedx</groupId>
-                <artifactId>cyclonedx-maven-plugin</artifactId>
-                <version>${cyclonedx-maven-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>consumer-bom</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>makeBom</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <!-- The release profile activates central-publishing-maven-plugin as an
-                         extension, which marks modules as skipping maven-deploy-plugin. CycloneDX's
-                         skipNotDeployed then defaults to skipping the SBOM, so `-Prelease` produced
-                         no SBOM at all while a plain `package` produced one. The release path is
-                         exactly where the SBOM has to exist. -->
-                    <skipNotDeployed>false</skipNotDeployed>
-                    <projectType>library</projectType>
-                    <schemaVersion>1.6</schemaVersion>
-                    <outputFormat>json</outputFormat>
-                    <outputName>${project.artifactId}-${project.version}-cyclonedx</outputName>
-                    <classifier>cyclonedx</classifier>
-                    <includeCompileScope>true</includeCompileScope>
-                    <includeRuntimeScope>true</includeRuntimeScope>
-                    <includeProvidedScope>false</includeProvidedScope>
-                    <includeSystemScope>false</includeSystemScope>
-                    <includeTestScope>false</includeTestScope>
-                </configuration>
-            </plugin>
-        </plugins>
     </build>
 
     <distributionManagement>
