@@ -41,6 +41,11 @@ build/
 *.log
 
 ### Agent / internal ###
-# CLAUDE.md and plans/ are deliberately tracked: CLAUDE.md is the repository's routing file
-# and the canonical documentation links to plans/DESIGN.md. They were listed here while an
-# earlier commit tried to untrack them, which left ignore rules contradicting the index.
+# CLAUDE.md is deliberately tracked: it is the repository's routing file.
+#
+# plans/ is NOT tracked. Planning content is private and is maintained outside this public
+# repository. It was untracked in 7f68cd6 but the ignore rule was not restored at the same
+# time, which left plans/ neither tracked nor ignored for a period - one `git add -A` away
+# from being republished. A .gitignore entry does not untrack what is already tracked, and
+# untracking does not ignore what is left behind; both halves are needed.
+plans/

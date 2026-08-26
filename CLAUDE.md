@@ -37,11 +37,8 @@ Build from the reactor root. Vulnerability scanning is not run in GitHub Actions
 
 ## Source Material Routing
 
-| Document | Path | Read when... |
-|----------|------|-------------|
-| VISION.md | `plans/VISION.md` | Always read first |
-| DESIGN.md | `plans/DESIGN.md` | Before implementation |
-| ROADMAP.md | `plans/ROADMAP.md` | Before starting any step |
+The planning trio (vision, design, roadmap) is maintained privately and is not part of this
+repository. Public contracts, tests and the implementation are the current-state authority here.
 
 ## Architecture (v0.2)
 
