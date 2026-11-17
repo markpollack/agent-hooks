@@ -21,6 +21,11 @@ A single adapter needs `-am` (for example `-pl agent-hooks-spring -am`), or core
 installed. Vulnerability scanning is not part of CI; run `scripts/security-scan.sh` against an
 offline database you have validated and frozen.
 
+`ClaudeCliLiveTest` drives a real Claude CLI (PreToolUse Block and Modify through SDK and CLI) and is
+skipped unless `AGENT_HOOKS_LIVE=true` (or `-Dagent-hooks.live=true`) is set and `claude` is on
+`PATH`. It calls a real model. Run it locally before a release that changes the SDK:
+`AGENT_HOOKS_LIVE=true ./mvnw test -pl agent-hooks-claude -am -Dtest=ClaudeCliLiveTest -Dsurefire.failIfNoSpecifiedTests=false`
+
 ## Modules
 
 - `agent-hooks-core`: events, decisions, `AgentHookRegistry`, SPI. Java 17.
